@@ -5,7 +5,7 @@ import { useAfterPhysicsStep, useBeforePhysicsStep, useRapier } from '@react-thr
 export type Distribution = { mean: number; p50: number; p95: number; p99: number; max: number };
 export type BenchmarkMetrics = {
   protocol: 'neighborhood-graphics-v1'; status: 'live' | 'running' | 'complete';
-  scenario?: string; buildMode?: string; jsHeapUsedMB: number | null;
+  scenario?: string; buildMode?: string; hero?: boolean; quality?: 'low' | 'balanced' | 'high'; jsHeapUsedMB: number | null;
   durationSeconds: number; frames: number; frameMs: Distribution | null; fps: number | null;
   over33ms: number; over50ms: number; renderSubmitCpuMs: Distribution | null;
   physicsStepCpuMs: Distribution | null; physicsSteps: number;

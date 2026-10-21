@@ -33,7 +33,7 @@ type Bucket = {
 };
 
 /** A registry of visual instances only: colliders remain where the scene declares them. */
-class StaticRegistry {
+export class StaticRegistry {
   readonly root = new THREE.Group();
   private buckets = new Map<string, Bucket>();
   private dirty = new Set<Bucket>();
@@ -47,6 +47,11 @@ class StaticRegistry {
   private color = new THREE.Color();
 
   register(group: THREE.Group, color: string, spec: Specification): () => void {
+    // These are empty transform markers, not the rendered instances or Rapier parents.
+    // Preserve their React-owned transforms, but do not compose/multiply them every frame.
+    group.matrixAutoUpdate = false;
+    group.matrixWorldAutoUpdate = false;
+    group.visible = false;
     const key = JSON.stringify(spec);
     let bucket = this.buckets.get(key);
     if (!bucket) {
@@ -139,7 +144,14 @@ class StaticRegistry {
       for (const { group, color } of bucket.instances.values()) {
         // Includes fixed Rapier body transforms and all parent groups. Never read
         // a stale matrix from the prior React render or flatten collider transforms.
-        group.updateWorldMatrix(true, false);
+        // Matrix auto-updates are disabled only on this leaf. Dirty registrations must
+        // explicitly refresh local + world matrices after React prop or parent changes.
+        group.updateMatrix();
+        if (group.parent) {
+          group.parent.updateWorldMatrix(true, false);
+          group.matrixWorld.multiplyMatrices(group.parent.matrixWorld, group.matrix);
+        } else group.matrixWorld.copy(group.matrix);
+        group.matrixWorldNeedsUpdate = false;
         this.matrix.multiplyMatrices(this.inverseRoot, group.matrixWorld);
         mesh.setMatrixAt(index, this.matrix);
         mesh.setColorAt(index, this.color.set(color));
