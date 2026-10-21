@@ -80,7 +80,7 @@ export default function Controller(props: ControllerProps) {
   const angles = useRef({ yaw: state.checkpoint.yaw, pitch: Math.max(-0.95, Math.min(0.35, state.checkpoint.pitch || -0.24)) });
   const boom = useRef({ requested: CAMERA_DEFAULT_DISTANCE, actual: CAMERA_DEFAULT_DISTANCE });
   const heading = useRef(state.checkpoint.yaw + Math.PI);
-  const heroMotion = useRef<HeroMotion>({ speed: 0, distance: 0, grounded: false, verticalVelocity: 0,
+  const heroMotion = useRef<HeroMotion>({ speed: 0, distance: 0, grounded: true, verticalVelocity: 0,
     held: state.held, heading: state.checkpoint.yaw + Math.PI, paused: !active });
   heroMotion.current.paused = !active;
   heroMotion.current.held = state.held;

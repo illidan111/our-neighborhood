@@ -248,13 +248,14 @@ function Generator() {
 
 function Path({ from, to, width = 3.3 }: { from: [number, number]; to: [number, number]; width?: number }) {
   const dx = to[0] - from[0], dz = to[1] - from[1], length = Math.hypot(dx, dz);
-  const rows = Math.max(1, Math.floor(length / 0.95)), columns = Math.max(2, Math.round(width / 0.85));
+  const rows = Math.max(1, Math.floor(length / 0.72)), columns = Math.max(2, Math.round(width / 0.67));
   return <group position={[(from[0] + to[0]) / 2, 0, (from[1] + to[1]) / 2]} rotation={[0, Math.atan2(dx, dz), 0]}>
-    <Box position={[0, 0.012, 0]} size={[width, 0.018, length]} color="#9aa47d" castShadow={false} />
+    <Box position={[0, 0.009, 0]} size={[width, 0.012, length]} color={C.grass} castShadow={false} />
     {Array.from({ length: rows * columns }, (_, i) => {
       const row = Math.floor(i / columns), column = i % columns;
       const jitter = Math.sin(row * 9.13 + column * 4.97 + from[0]);
-      return <StaticPrimitive key={i} shape="paver" position={[(column + 0.5) / columns * width - width / 2 + jitter * 0.07, 0.032, (row + 0.5) / rows * length - length / 2 + jitter * 0.05]} scale={[width / columns * 0.51, 0.045, length / rows * 0.51]} rotation={[0, jitter * 0.22, 0]} color={['#c5c2af', '#b5b7a8', '#d0c8b1', '#bcbba8'][(row + column) % 4]} castShadow={false} />;
+      const variation = 0.43 + Math.sin(i * 3.7) * 0.055;
+      return <StaticPrimitive key={i} shape="paver" position={[(column + 0.5) / columns * width - width / 2 + jitter * 0.07, 0.024, (row + 0.5) / rows * length - length / 2 + jitter * 0.05]} scale={[width / columns * variation, 0.027, length / rows * (0.46 + jitter * 0.045)]} rotation={[0, jitter * 0.74, 0]} color={['#b7b9a8', '#aeb3a1', '#c3bda7', '#b4b6a3'][(row + column) % 4]} castShadow={false} />;
     })}
   </group>;
 }
@@ -265,9 +266,10 @@ function Tree({ position, scale = 1, autumn = false, shape = 0 }: { position: Ve
     <group scale={scale}>
       <Cylinder position={[0, 1.25, 0]} radius={0.17} bottom={0.26} height={2.5} sides={6} />
       <Cylinder position={[0.3, 2.1, 0]} radius={0.09} height={1.1} sides={5} rotation={[0, 0, -0.65]} />
-      <StaticPrimitive shape="leaf" position={[0, 3.7, 0]} scale={shape ? [1.4, 2.3, 1.3] : [1.85, 1.7, 1.7]} color={autumn ? '#c6b46b' : '#7d9c5c'} />
-      <StaticPrimitive shape="leaf" position={[-0.85, 3.15, 0.1]} scale={[1.2, 1.2, 1.3]} color={autumn ? '#b6a264' : '#62834e'} />
-      <StaticPrimitive shape="leaf" position={[0.7, 3.25, 0.45]} scale={[1.1, 1.35, 1.2]} color={autumn ? '#d5c17c' : '#a0b574'} />
+      <StaticPrimitive shape="leaf" position={[0, 3.7, 0]} scale={shape ? [1.4, 2.0, 1.3] : [1.65, 1.55, 1.55]} rotation={[0, shape * 0.87, 0.08]} color={autumn ? '#c6b46b' : '#82a363'} />
+      <StaticPrimitive shape="leaf" position={[-0.85, 3.15, 0.1]} scale={[1.12, 1.0, 1.18]} rotation={[0.18, 0.7, -0.1]} color={autumn ? '#b6a264' : '#6b8e54'} />
+      <StaticPrimitive shape="leaf" position={[0.7, 3.25, 0.45]} scale={[1.04, 1.1, 1.1]} rotation={[0, 1.6, 0.15]} color={autumn ? '#d5c17c' : '#a1b775'} />
+      <StaticPrimitive shape="leaf" position={[-0.5, 4.35, -0.2]} scale={[0.85, 0.78, 0.95]} rotation={[0, -0.9, -0.1]} color={autumn ? '#d5c17c' : '#91ad6c'} />
     </group>
   </RigidBody>;
 }
@@ -284,12 +286,12 @@ function Fence({ from, to, color = C.lightWood }: { from: [number, number]; to: 
 function FlowerPatch({ x, z, y = 0, color = '#c4b3d4', sparse = false }: { x: number; z: number; y?: number; color?: string; sparse?: boolean }) {
   return <group position={[x, y, z]}>
     {Array.from({ length: sparse ? 4 : 8 }, (_, i) => {
-      const a = i * 2.4, radius = Math.sqrt(i + 1) * 0.21, height = 0.27 + (i % 3) * 0.09;
+      const a = i * 2.4, radius = Math.sqrt(i + 1) * 0.24, height = 0.34 + (i % 3) * 0.11;
       return <group key={i} position={[Math.cos(a) * radius, 0, Math.sin(a) * radius]}>
         <StaticPrimitive shape="grass" scale={[0.35, height * 1.15, 0.35]} rotation={[0, a, 0]} color={i % 2 ? '#668653' : '#839c5e'} castShadow={false} />
         <Cylinder radius={0.009} height={height} position={[0, height / 2, 0]} color={C.grassDark} sides={4} castShadow={false} />
-        <StaticPrimitive shape="flower" position={[0, height, 0]} scale={[0.13, 0.13, 0.13]} rotation={[0.12, a, 0.22]} color={i % 3 === 0 ? '#f1e9d4' : color} castShadow={false} />
-        <Boulder position={[0, height + 0.011, 0]} scale={[0.027, 0.019, 0.027]} color="#d6b66c" castShadow={false} />
+        <StaticPrimitive shape="flower" position={[0, height, 0]} scale={[0.19, 0.19, 0.19]} rotation={[0.12, a, 0.22]} color={i % 3 === 0 ? '#f1e9d4' : color} castShadow={false} />
+        <Boulder position={[0, height + 0.014, 0]} scale={[0.038, 0.023, 0.038]} color="#d6b66c" castShadow={false} />
       </group>;
     })}
   </group>;
@@ -314,6 +316,8 @@ function RouteGardens({ quality }: { quality: GraphicsQuality }) {
   const beds: [number, number, string][] = [
     [-17.6, 5, '#d2a4ab'], [-17.8, 2.5, '#cab5d4'], [-17.9, -0.3, '#cab5d4'], [-18.1, -3, '#d9b68c'],
     [-11.7, 4.6, '#e2c69a'], [-11.8, 1.7, '#d5b0c0'], [-20.1, -5.3, '#d2a4ab'], [-18.2, -5.8, '#d5b0c0'],
+    [-8.2, -7.6, '#c4abd1'], [-6.4, -6.2, '#c4abd1'], [-4.2, -4.8, '#d6b6c4'], [-2, -3.3, '#d6b6c4'],
+    [-10.2, -0.9, '#e5d5ae'], [-7.6, 0.4, '#e5d5ae'], [-5, 1.7, '#c7b5d4'],
     [6.8, 5.7, '#c0b3d5'], [9, 6.3, '#d4b2c8'], [12, 6.5, '#c0b3d5'], [15.2, 6.5, '#c0b3d5'],
     [17.5, 2, '#e8d6ab'], [9.4, -8.4, '#d2bd88'], [14.8, -9, '#d2bd88'], [16.7, -11.7, '#e8d6ab'],
   ];
@@ -467,7 +471,7 @@ const TREES: [number, number, number, boolean?][] = [
 
 function Scenery() {
   return <group>
-    {[-52, -25, 3, 31, 58].map((x, i) => <StaticPrimitive key={`mountain-${i}`} shape="mountain" position={[x, -2, -68 - (i % 2) * 8]} scale={[25, 23 + (i % 3) * 7, 21]} rotation={[0, i * 0.47, 0]} color={i % 2 ? '#a2b9ba' : '#91acae'} castShadow={false} receiveShadow={false} />)}
+    {[-52, -25, 3, 31, 58].map((x, i) => <StaticPrimitive key={`mountain-${i}`} shape="mountain" position={[x, -2, -83 - (i % 2) * 7]} scale={[28, 16 + (i % 3) * 3, 22]} rotation={[0, i * 0.27, 0]} color={i % 2 ? '#a8bec2' : '#99b2b8'} castShadow={false} receiveShadow={false} />)}
     {TREES.map(([x, z, scale, autumn], i) => <Tree key={i} position={[x, 0, z]} scale={scale} autumn={autumn} shape={i % 3 === 0 ? 1 : 0} />)}
     {[-33, -22, -10, 4, 18, 32].flatMap((x, i) => [-38, 47].map((z, j) => <Boulder key={`${x}:${z}`} position={[x, -2.5, z]} scale={[12, 8 + (i % 3) * 2, 10]} color={j ? '#90b48a' : '#8cae94'} castShadow={false} />))}
     {[-24, -7, 13, 30].map((z, i) => <Boulder key={z} position={[-50, -2, z]} scale={[13, 9 + i, 14]} color="#a7bf8f" castShadow={false} />)}
@@ -540,8 +544,10 @@ function Weather({ phase, quality }: { phase: FPSState['phase']; quality: Graphi
     <mesh ref={water} position={[24.5, -0.2, 3]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[5, 73]} /><meshStandardMaterial color={C.water} roughness={0.3} metalness={0.1} transparent opacity={0.9} /></mesh>
     {Array.from({ length: 22 }, (_, i) => <Box key={i} position={[22.7 + (i % 4) * 0.95, -0.183, -27 + i * 3]} size={[0.55 + (i % 3) * 0.18, 0.008, 0.04]} color="#b4dce0" castShadow={false} />)}
     <lineSegments ref={rain} geometry={rainGeometry}><lineBasicMaterial color="#cfdfec" transparent opacity={0} depthWrite={false} /></lineSegments>
-    {[[-15, 18, -30], [18, 21, -39], [32, 19, 15], [-32, 20, 12]].map(([x, y, z], i) => <group key={i} position={[x, y, z]}>
-      <Boulder position={[0, 0, 0]} scale={[5, 1.5, 2.2]} color="#e9eee0" castShadow={false} /><Boulder position={[3, 0.3, 0]} scale={[3, 1.7, 2]} color="#e9eee0" castShadow={false} />
+    {[[-24, 21, -49], [8, 24, -59], [34, 22, -40], [-39, 23, 18]].map(([x, y, z], i) => <group key={i} position={[x, y, z]}>
+      <StaticPrimitive shape="leaf" position={[0, 0, 0]} scale={[5.8, 1.1, 2.1]} color="#edf1e9" castShadow={false} receiveShadow={false} />
+      <StaticPrimitive shape="leaf" position={[3, 0.4, 0]} scale={[3.1, 1.35, 2]} color="#edf1e9" castShadow={false} receiveShadow={false} />
+      <StaticPrimitive shape="leaf" position={[-2.6, 0.5, 0.4]} scale={[2.4, 1.4, 1.8]} color="#edf1e9" castShadow={false} receiveShadow={false} />
     </group>)}
   </>;
 }

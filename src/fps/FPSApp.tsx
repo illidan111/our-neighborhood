@@ -10,29 +10,33 @@ import type { FPSState, GameCommand, TargetId, Vec3 } from './model';
 import { clearFPS, loadFPS } from './storage';
 import { persistFPS, saveTelemetry } from './saveTelemetry';
 import Diagnostics from './Diagnostics';
+import SceneReady from './SceneReady';
+import GraphicsSettings from './GraphicsSettings';
+import { graphicsQuality, renderScale } from './quality';
+import type { GraphicsQuality } from './quality';
 import type { BenchmarkMetrics } from './Diagnostics';
 import { BOT } from '../game';
 import { enableAudio, sound, unlockAudio } from './audio';
 
-type Settings = { sensitivity: number; bob: boolean; audio: boolean };
+type Settings = { sensitivity: number; bob: boolean; audio: boolean; quality: GraphicsQuality; renderScale: number };
 const SETTINGS_KEY = 'our-neighborhood-controls';
 function readSettings(): Settings {
   try {
     const value = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return { sensitivity: typeof value?.sensitivity === 'number' && Number.isFinite(value.sensitivity) ? Math.min(2, Math.max(.2, value.sensitivity)) : 1, bob: value?.bob === true, audio: value?.audio !== false };
-  } catch { return { sensitivity: 1, bob: false, audio: true }; }
+    return { sensitivity: typeof value?.sensitivity === 'number' && Number.isFinite(value.sensitivity) ? Math.min(2, Math.max(.2, value.sensitivity)) : 1, bob: value?.bob === true, audio: value?.audio !== false, quality: graphicsQuality(value?.quality), renderScale: renderScale(value?.renderScale) };
+  } catch { return { sensitivity: 1, bob: false, audio: true, quality: 'balanced', renderScale: 1 }; }
 }
 class SceneBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
   state = { error: false };
   static getDerivedStateFromError() { return { error: true }; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error('Не удалось запустить 3D-сцену', error, info); }
-  render() { return this.state.error ? <div className="scene-error">Не удалось запустить 3D. Обнови страницу в браузере с включённым WebGL. Прогресс сохранён отдельно.</div> : this.props.children; }
+  render() { return this.state.error ? <div className="scene-error" role="alert"><strong>Не удалось открыть район</strong><p>Модель или 3D-сцена не загрузилась. Проверь соединение и поддержку WebGL. Сохранённая история остаётся на месте.</p><button className="primary-button" onClick={() => window.location.reload()}>Попробовать ещё раз</button></div> : this.props.children; }
 }
 const phaseNames = { preparation: 'День 1 · до грозы', storm: 'День 1 · гроза', aftermath: 'После грозы · утро' };
 
 export default function FPSApp() {
   const [loaded] = useState(loadFPS);
-  const [state, setState] = useState<FPSState>(() => loaded.state ?? createFPSGame('Сосед', '#e78064'));
+  const [state, setState] = useState<FPSState>(() => loaded.state ?? createFPSGame('Сосед', '#5c9290'));
   const stateRef = useRef(state);
   const [settings, setSettings] = useState(readSettings);
   const [menu, setMenu] = useState<'start' | 'pause' | 'journal' | null>('start');
@@ -164,12 +168,12 @@ export default function FPSApp() {
   return <main className="fps-app">
     <div className="world-surface" ref={surface} data-phase={state.phase} data-battery={state.batteryAt ?? 'none'} data-held={state.held ?? 'none'} data-supplies={state.deliveredSupplies} data-bridge={state.bridgeRepaired} data-pointer-locked={locked}>
       <SceneBoundary>
-        <Canvas ref={canvas} tabIndex={0} shadows camera={{ fov: 70, near: .05, far: 180, position: [-14, 1.65, 15] }} dpr={[1, 1.6]} gl={{ antialias: true, powerPreference: 'high-performance' }} onCreated={({ gl }) => { canvas.current = gl.domElement; gl.domElement.setAttribute('aria-label', 'Трёхмерный район'); gl.domElement.tabIndex = 0; }}>
+        <Canvas ref={canvas} tabIndex={0} shadows={settings.quality !== 'low'} camera={{ fov: 65, near: .05, far: 180, position: [-14, 1.65, 15] }} dpr={settings.renderScale} gl={{ antialias: true, powerPreference: 'high-performance' }} onCreated={({ gl }) => { canvas.current = gl.domElement; gl.domElement.setAttribute('aria-label', 'Трёхмерный район'); gl.domElement.tabIndex = 0; }}>
           <Suspense fallback={null}>
             <Physics timeStep={1 / 60} paused={!active} gravity={[0, -22, 0]}>
-              <Neighborhood state={state} />
+              <Neighborhood state={state} quality={settings.quality} />
               <Controller key={session} state={state} active={active} sensitivity={settings.sensitivity} bob={settings.bob} onFocus={setFocus} onCommand={command} onMotion={value => { walking.current = value; }} onPose={reportPose} />
-              <Ready onReady={setReady} />
+              <SceneReady key={settings.quality} onReady={setReady} />
               {diagnostics && <Diagnostics run={0} onSample={setMetrics} />}
             </Physics>
           </Suspense>
@@ -182,7 +186,7 @@ export default function FPSApp() {
       <div className="objective"><span className="objective-dot" /><p>{getObjective(state)}</p></div>
       {active && <><div className={`crosshair ${target?.canInteract ? 'crosshair-ready' : ''}`} /><div className="context-prompt" aria-live="polite">{target && <><kbd className={!target.canInteract ? 'inactive-key' : ''}>E</kbd><span>{target.label}</span></>}</div></>}
       {toast && <div className="world-toast" role="status">{toast}</div>}
-      <div className="hud-bottom"><span className="movement-hints"><kbd>WASD</kbd> идти <b>·</b> <kbd>Shift</kbd> бежать <b>·</b> <kbd>Space</kbd> прыжок <b>·</b> <kbd>J</kbd> дневник</span><span className="carried-label">{state.held ? <><strong>{ITEM_NAMES[state.held]}</strong><span><kbd>Q</kbd> отпустить <kbd>G</kbd> бросить</span></> : <span><kbd>Esc</kbd> пауза</span>}</span></div>
+      <div className="hud-bottom"><span className="movement-hints"><kbd>WASD</kbd> идти <b>·</b> <kbd>Shift</kbd> бежать <b>·</b> <kbd>Space</kbd> прыжок <b>·</b> <kbd>J</kbd> дневник <b>·</b> <kbd>Колесо</kbd> дистанция</span><span className="carried-label">{state.held ? <><strong>{ITEM_NAMES[state.held]}</strong><span><kbd>Q</kbd> отпустить <kbd>G</kbd> бросить</span></> : <span><kbd>Esc</kbd> пауза</span>}</span></div>
       {saveError && <div className="save-warning">{saveError}</div>}
     </div>}
 
@@ -191,20 +195,20 @@ export default function FPSApp() {
       <h1>Наш район<span>🌿</span></h1>
       <p className="start-description">До вечера ещё есть время.<br />Принеси припасы домой и реши, кому нужнее единственный аккумулятор.</p>
       <div className="start-line"><Footprints size={19} /><span>Гуляй, переноси предметы, помогай соседям.</span></div>
-      {!loaded.state && <div className="identity"><label>Твоё имя<input maxLength={22} value={name} onChange={event => setName(event.target.value)} placeholder="Сосед" /></label><div className="color-options" aria-label="Цвет рукавов">{['#e78064', '#54a9ae', '#8d78b4', '#e5b54b'].map(value => <button key={value} className={color === value ? 'selected' : ''} style={{ background: value }} aria-label={`Цвет ${value}`} aria-pressed={color === value} onClick={() => setColor(value)}>{color === value && <Check size={15} />}</button>)}</div></div>}
-      {loaded.state?.legacyImported && <p className="fine-print">Прежняя история сохранена. Прогулка от первого лица — новый день подготовки.</p>}
+      {!loaded.state && <div className="identity"><label>Твоё имя<input maxLength={22} value={name} onChange={event => setName(event.target.value)} placeholder="Сосед" /></label><div className="color-options" aria-label="Цвет одежды">{['#5c9290', '#b87865', '#8980a6', '#bca56c'].map(value => <button key={value} className={color === value ? 'selected' : ''} style={{ background: value }} aria-label={`Цвет ${value}`} aria-pressed={color === value} onClick={() => setColor(value)}>{color === value && <Check size={15} />}</button>)}</div></div>}
+      {loaded.state?.legacyImported && <p className="fine-print">Прежняя история сохранена. Прогулка по району — новый день подготовки.</p>}
       {loaded.error && <p className="inline-warning">{loaded.error} {loaded.error.includes('поврежден') && 'Начать новую можно через сброс в меню паузы.'}</p>}
-      <button className="primary-button" onClick={begin} disabled={!ready}>{ready ? (loaded.state ? 'Вернуться в район' : 'Начать прогулку') : 'Открываем дверь…'}<ArrowRight size={20} /></button>
+      <button className="primary-button" onClick={begin} disabled={!ready}>{ready ? (loaded.state ? 'Вернуться в район' : 'Начать прогулку') : 'Загружаем героя и готовим район…'}<ArrowRight size={20} /></button>
       {inputError && <p className="inline-warning">{inputError}</p>}
-      <p className="fine-print">Клавиатура + мышь · около 8 минут · 3 местных бота<br />Нажатие включает обзор мышью. Esc — освободить курсор.</p>
+      <GraphicsSettings quality={settings.quality} scale={settings.renderScale} onChange={(quality, scale) => setSettings(value => ({ ...value, quality, renderScale: scale }))} /><p className="fine-print">Клавиатура + мышь · около 8 минут · 3 местных бота<br />Нажатие включает обзор мышью. Esc — освободить курсор.</p>
     </section><div className="start-caption">День перед грозой<br /><span>Общий дом</span></div></div>}
 
     {menu === 'pause' && <div className="menu-backdrop"><section className="pause-card"><div className="eyebrow">Наш район · прогулка приостановлена</div><h2>Можно выдохнуть.</h2><p className="menu-subtitle">{state.phase === 'aftermath' ? outcome.title : 'Соседи подождут, пока ты вернёшься.'}</p>
-      <button className="primary-button" onClick={() => void resume()}>Продолжить<ArrowRight size={20} /></button>
+      <button className="primary-button" disabled={!ready} onClick={() => void resume()}>Продолжить<ArrowRight size={20} /></button>
       {inputError && <p className="inline-warning">{inputError}</p>}
       <button className="secondary-button" onClick={() => setMenu('journal')}><BookOpen size={18} /> Дневник и личная цель</button>
-      <div className="settings"><label htmlFor="sensitivity">Чувствительность мыши <b>{settings.sensitivity.toFixed(1)}</b></label><input id="sensitivity" type="range" min=".2" max="2" step=".1" value={settings.sensitivity} onChange={event => setSettings(value => ({ ...value, sensitivity: Number(event.target.value) }))} /><label className="toggle-row"><span><Footprints size={17} /> Лёгкое покачивание камеры</span><input type="checkbox" checked={settings.bob} onChange={event => setSettings(value => ({ ...value, bob: event.target.checked }))} /></label><label className="toggle-row"><span><Volume2 size={17} /> Звуки района</span><input type="checkbox" checked={settings.audio} onChange={event => setSettings(value => ({ ...value, audio: event.target.checked }))} /></label></div>
-      <div className="controls-grid"><span><kbd>WASD</kbd> движение</span><span><kbd>Мышь</kbd> обзор</span><span><kbd>Shift</kbd> бег</span><span><kbd>Space</kbd> прыжок</span><span><kbd>E</kbd> взаимодействие</span><span><kbd>Q / G</kbd> отпустить / бросить</span><span><kbd>J</kbd> дневник</span><span><kbd>Esc</kbd> пауза</span></div>
+      <div className="settings"><label htmlFor="sensitivity">Чувствительность мыши <b>{settings.sensitivity.toFixed(1)}</b></label><input id="sensitivity" type="range" min=".2" max="2" step=".1" value={settings.sensitivity} onChange={event => setSettings(value => ({ ...value, sensitivity: Number(event.target.value) }))} /><label className="toggle-row"><span><Volume2 size={17} /> Звуки района</span><input type="checkbox" checked={settings.audio} onChange={event => setSettings(value => ({ ...value, audio: event.target.checked }))} /></label></div>
+      <GraphicsSettings quality={settings.quality} scale={settings.renderScale} onChange={(quality, scale) => setSettings(value => ({ ...value, quality, renderScale: scale }))} /><div className="controls-grid"><span><kbd>WASD</kbd> движение</span><span><kbd>Мышь</kbd> вращать камеру</span><span><kbd>Колесо</kbd> приблизить / отдалить</span><span><kbd>Shift</kbd> бег</span><span><kbd>Space</kbd> прыжок</span><span><kbd>E</kbd> взаимодействие</span><span><kbd>Q / G</kbd> отпустить / бросить</span><span><kbd>J</kbd> дневник</span><span><kbd>Esc</kbd> пауза</span></div>
       <button className="reset-button" onClick={restart}><RotateCcw size={15} />{confirmReset ? 'Да, начать новый день с начала' : 'Начать заново'}</button>{confirmReset && <button className="cancel-reset" onClick={() => setConfirmReset(false)}>Отмена</button>}
       {saveError && <p className="inline-warning">{saveError}</p>}
     </section></div>}
@@ -214,10 +218,9 @@ export default function FPSApp() {
       <h3 className="journal-heading">Соседи · локальные боты</h3><div className="neighbors">{BOT.map(bot => <article key={bot.id}><span className="neighbor-avatar" style={{ background: bot.color }}>{bot.name[0]}</span><div><strong>{bot.name}</strong><p>{state.botReactions[bot.id]}</p></div></article>)}</div>
       <h3 className="journal-heading">Что произошло</h3><ol className="event-list">{state.history.map(entry => <li key={entry.id}>{entry.text}</li>)}</ol>
       {state.legacyImported && <details><summary>Архив прежней кампании · {state.base.history.length} записей</summary><p>Архив сохранён в состоянии игры. Новый физический сценарий использует отдельный журнал.</p></details>}
-    </div><footer><button className="primary-button" onClick={() => void resume()}>Вернуться к прогулке<ArrowRight size={19} /></button></footer></section></div>}
+    </div><footer><button className="primary-button" disabled={!ready} onClick={() => void resume()}>Вернуться к прогулке<ArrowRight size={19} /></button></footer></section></div>}
     <div className="desktop-note">Для прогулки нужны клавиатура и мышь.</div>
     {diagnostics && <aside className="diagnostics-panel" aria-label="Диагностика производительности"><strong>Диагностика · F3 скрыть</strong><pre>{metrics ? JSON.stringify({ frameMs: metrics.frameMs, calls: metrics.drawCalls?.p50, triangles: metrics.triangles?.p50, cpuRenderMs: metrics.renderSubmitCpuMs?.p50, gpuMs: metrics.gpuMs?.p50, physicsMs: metrics.physicsStepCpuMs?.p95, geometry: metrics.geometries, saves: saveTelemetry }, null, 2) : 'Собираем кадры…'}</pre><small>FPS в фоновой вкладке может быть ограничен браузером.</small></aside>}
   </main>;
 }
 
-function Ready({ onReady }: { onReady: (ready: boolean) => void }) { useEffect(() => { onReady(true); return () => onReady(false); }, [onReady]); return null; }
