@@ -1,0 +1,91 @@
+.town-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.town-scene canvas {
+  display: block;
+  touch-action: pan-y;
+}
+.town-scene--passive canvas,
+.town-scene--passive .map-label {
+  pointer-events: none;
+  cursor: default;
+}
+.scene-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.scene-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  will-change: transform;
+}
+.map-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid rgba(92, 110, 86, 0.15);
+  border-radius: 100px;
+  background: rgba(255, 253, 240, 0.96);
+  color: #2d4941;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  box-shadow: 0 3px 9px #4d68411a;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    transform 0.18s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-label:hover {
+  background: #fffdf0;
+  border-color: #79a496;
+  transform: translateY(-2px);
+}
+.map-label.is-selected {
+  border-color: #e77b55;
+  background: #fff1df;
+  box-shadow: 0 3px 14px #ad6b3824;
+}
+.map-label:focus-visible {
+  outline: 3px solid #eaa97b;
+  outline-offset: 3px;
+}
+.map-label-dot {
+  width: 8px;
+  height: 8px;
+  background: #6c9d87;
+  border: 2px solid #a3c1a5;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.map-label.is-selected .map-label-dot {
+  background: #e98057;
+  border-color: #edbb90;
+}
+@media (max-width: 700px) {
+  .map-label {
+    padding: 8px 9px;
+    font-size: 9px;
+    gap: 5px;
+    min-height: 30px;
+  }
+  .map-label-dot {
+    width: 7px;
+    height: 7px;
+  }
+}
