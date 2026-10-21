@@ -8,6 +8,7 @@ import { ITEM_IDS, ITEM_SPAWNS, isInsideWorld, PLAYER_SPAWN } from "./model";
 import type { FPSState, GameCommand, ItemId, TargetId, Vec3 } from "./model";
 import { carryPosition, configureCharacter, ITEM_HALF_SIZES, PLAYER_EYE_OFFSET, PLAYER_HALF_SEGMENT, PLAYER_RADIUS, stepCharacter } from "./physics";
 import type { CharacterMotion } from "./physics";
+import { FirstPersonHands } from "./Character";
 
 type ControllerProps = {
   state: FPSState;
@@ -27,7 +28,7 @@ const HELD_GROUPS = interactionGroups(2, [0, 2]);
 const ZERO = { x: 0, y: 0, z: 0 };
 const asTuple = (p: { x: number; y: number; z: number }): Vec3 => [p.x, p.y, p.z];
 
-function ItemModel({ id }: { id: ItemId }) {
+export function ItemModel({ id }: { id: ItemId }) {
   if (id === "battery") return <group>
     <mesh castShadow><boxGeometry args={[0.56, 0.68, 0.44]} /><meshStandardMaterial color="#e9b72f" roughness={0.65} /></mesh>
     <mesh position={[0, 0, 0.226]}><boxGeometry args={[0.4, 0.43, 0.018]} /><meshStandardMaterial color="#304650" /></mesh>
@@ -276,12 +277,7 @@ export default function Controller(props: ControllerProps) {
       <ItemModel id={id} />
     </RigidBody>)}
     <group ref={handsVisual} visible={false}>
-      {[-1, 1].map(side => <group key={side} position={[side * ((state.held ? ITEM_HALF_SIZES[state.held][0] : 0.43) + 0.035), -0.07, 0.08]}>
-        <mesh position={[side * 0.035, -0.07, 0.2]} rotation={[Math.PI / 2 + 0.18, 0, -side * 0.12]} castShadow>
-          <cylinderGeometry args={[0.08, 0.105, 0.36, 7]} /><meshStandardMaterial color={state.player.color} />
-        </mesh>
-        <mesh scale={[0.085, 0.075, 0.11]} castShadow><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#e9bd95" /></mesh>
-      </group>)}
+      <FirstPersonHands held={state.held} color={state.player.color} />
     </group>
   </>;
 }

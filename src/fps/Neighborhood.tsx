@@ -6,6 +6,8 @@ import { BOT } from '../game';
 import type { FPSState, TargetId } from './model';
 import { TARGET_POSITIONS, type WorldPoint } from './landmarks';
 import { StaticBatch, StaticPrimitive, Unbatched } from './StaticBatch';
+import { Character } from './Character';
+import type { CharacterMotion } from './Character';
 
 const C = {
   grass: '#8eb965', grassLight: '#afc97d', grassDark: '#6d9d62', cream: '#f5e5bc',
@@ -350,37 +352,39 @@ function Bridge({ repaired, aftermath }: { repaired: boolean; aftermath: boolean
 function NPC({ id, position, happy }: { id: 'nina' | 'boris' | 'mira'; position: WorldPoint; happy: boolean }) {
   const bot = BOT.find(bot => bot.id === id)!;
   const body = useRef<RapierRigidBody>(null), avatar = useRef<THREE.Group>(null);
-  const leftLeg = useRef<THREE.Group>(null), rightLeg = useRef<THREE.Group>(null), leftArm = useRef<THREE.Group>(null), rightArm = useRef<THREE.Group>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, distance: 0, animation: 'idle' });
+  const previous = useRef({ x: position[0], z: position[2] });
+  const target = useRef({ x: position[0], y: position[1], z: position[2] });
   const offset = id === 'nina' ? 0 : id === 'boris' ? 3 : 6;
-  useFrame(({ clock }) => {
+  const restingAngle = id === 'nina' ? -0.7 : id === 'mira' ? -0.35 : 0.25;
+  useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime + offset;
-    // Short patrols keep each bot at its identifiable landmark; animation is presentation only.
+    // Preserve the original patrol and collider. Only presentation follows actual travel.
     const activity = THREE.MathUtils.smoothstep(Math.sin(t * 0.27), 0.4, 0.75);
     const dx = Math.sin(t * 0.7) * 0.35 * activity;
-    body.current?.setNextKinematicTranslation({ x: position[0] + dx, y: position[1], z: position[2] });
-    if (avatar.current) { avatar.current.position.y = Math.sin(t * 2) * 0.018; avatar.current.rotation.y = id === 'nina' ? -0.7 : id === 'mira' ? -0.35 : 0.25; }
-    const stride = Math.sin(t * 6) * 0.32 * activity + Math.sin(t * 1.2) * 0.025 * (1 - activity);
-    if (leftLeg.current) leftLeg.current.rotation.x = stride;
-    if (rightLeg.current) rightLeg.current.rotation.x = -stride;
-    if (leftArm.current) leftArm.current.rotation.x = -stride;
-    if (rightArm.current) { rightArm.current.rotation.x = stride; rightArm.current.rotation.z = happy ? -0.9 + Math.sin(t * 4) * 0.18 : -0.09; }
+    target.current.x = position[0] + dx;
+    body.current?.setNextKinematicTranslation(target.current);
+    const actual = body.current?.translation();
+    if (actual) {
+      const x = actual.x - previous.current.x, z = actual.z - previous.current.z;
+      const travel = Math.hypot(x, z);
+      motion.current.speed = travel / Math.max(delta, 0.0001);
+      motion.current.distance += travel;
+      motion.current.animation = motion.current.speed > 0.025 ? 'walk' : 'idle';
+      previous.current.x = actual.x; previous.current.z = actual.z;
+      if (avatar.current) {
+        const angle = motion.current.speed > 0.025 ? Math.atan2(x, z) : restingAngle;
+        const difference = Math.atan2(Math.sin(angle - avatar.current.rotation.y), Math.cos(angle - avatar.current.rotation.y));
+        avatar.current.rotation.y += difference * (1 - Math.exp(-delta * 9));
+      }
+    }
   });
   return <RigidBody ref={body} type="kinematicPosition" colliders={false} position={position} userData={{ target: id }}>
     <CuboidCollider args={[0.33, 0.88, 0.3]} position={[0, 0.88, 0]} />
-    <group ref={avatar}>
-      <Cylinder position={[0, 0.93, 0]} radius={0.29} bottom={0.34} height={0.62} color={bot.color} sides={7} />
-      <Box position={[0, 0.63, 0]} size={[0.53, 0.22, 0.35]} color={C.dark} />
-      <group position={[-0.16, 0.58, 0]} ref={leftLeg}><Box position={[0, -0.22, 0]} size={[0.2, 0.46, 0.22]} color={C.dark} /><Box position={[0, -0.48, 0.06]} size={[0.25, 0.16, 0.4]} color="#e3c09a" /></group>
-      <group position={[0.16, 0.58, 0]} ref={rightLeg}><Box position={[0, -0.22, 0]} size={[0.2, 0.46, 0.22]} color={C.dark} /><Box position={[0, -0.48, 0.06]} size={[0.25, 0.16, 0.4]} color="#e3c09a" /></group>
-      <group position={[-0.34, 1.16, 0]} ref={leftArm} rotation={[0, 0, 0.09]}><Cylinder position={[0, -0.24, 0]} radius={0.105} height={0.48} color={bot.color} sides={6} /><Boulder position={[0, -0.51, 0]} scale={[0.12, 0.14, 0.12]} color="#f0c39e" /></group>
-      <group position={[0.34, 1.16, 0]} ref={rightArm} rotation={[0, 0, -0.09]}><Cylinder position={[0, -0.24, 0]} radius={0.105} height={0.48} color={bot.color} sides={6} /><Boulder position={[0, -0.51, 0]} scale={[0.12, 0.14, 0.12]} color="#f0c39e" /></group>
-      <Boulder position={[0, 1.5, 0.015]} scale={[0.35, 0.37, 0.32]} color="#efc6a4" />
-      {[-0.11, 0.11].map(x => <Box key={x} position={[x, 1.54, 0.304]} size={[0.055, 0.08, 0.03]} color={C.dark} />)}
-      <Box position={[0, 1.4, 0.315]} size={[happy ? 0.14 : 0.1, 0.035, 0.026]} color="#925d4d" rotation={[0, 0, happy ? 0 : -0.1]} />
-      <Boulder position={[0, 1.49, 0.34]} scale={[0.065, 0.07, 0.09]} color="#dfa583" />
-      {id === 'nina' ? <><Cylinder position={[0, 1.81, 0]} radius={0.35} height={0.13} color={C.yellow} sides={8} /><Boulder position={[0.3, 1.5, -0.13]} scale={[0.19, 0.27, 0.19]} color="#8a6044" /></> : id === 'boris' ? <><Cylinder position={[0, 1.83, 0]} radius={0.36} height={0.19} color={bot.color} sides={8} /><Box position={[0, 1.76, 0.3]} size={[0.5, 0.07, 0.3]} color={bot.color} /><Box position={[0, 1.38, 0.26]} size={[0.2, 0.09, 0.08]} color="#7c5747" /></> : <><Boulder position={[0, 1.8, -0.02]} scale={[0.36, 0.19, 0.32]} color="#654f48" /><Box position={[0, 1.75, 0.29]} size={[0.45, 0.09, 0.1]} color={C.yellow} /></>}
-      <TextPlate lines={[`${bot.name} · БОТ`]} position={[0, 2.15, 0]} width={1.3} height={0.3} background={bot.color} ink="#ffffff" />
+    <group ref={avatar} rotation={[0, restingAngle, 0]}>
+      <Character variant={id} motion={motion.current} reactionToken={happy ? 1 : undefined} />
     </group>
+    <TextPlate lines={[`${bot.name} · БОТ`]} position={[0, 2.2, 0]} width={1.05} height={0.24} background={C.trim} ink={C.ink} />
   </RigidBody>;
 }
 
