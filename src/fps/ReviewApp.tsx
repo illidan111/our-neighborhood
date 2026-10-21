@@ -3,11 +3,15 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { CuboidCollider, Physics, RigidBody, useBeforePhysicsStep, useRapier } from '@react-three/rapier';
 import type { RapierRigidBody } from '@react-three/rapier';
 import { Vector3 } from 'three';
+import type { DirectionalLight, Group } from 'three';
 import Neighborhood from './Neighborhood';
 import Diagnostics from './Diagnostics';
 import type { BenchmarkMetrics, ReactMeasurements } from './Diagnostics';
 import { createFPSGame } from './model';
 import type { FPSState, Vec3 } from './model';
+import { Character } from './Character';
+import type { CharacterMotion, CharacterVariant } from './Character';
+import type { CharacterAnimation } from './characterAnimation';
 
 type Pose = { position: Vec3; look: Vec3; phase: FPSState['phase'] };
 export const REVIEW_POSES: Record<string, Pose> = {
@@ -27,6 +31,51 @@ const ROUTE: Array<{ time: number; position: Vec3; look: Vec3 }> = [
   { time: 30, position: [1, 1.67, 9], look: [-7, 1.3, -6] },
 ];
 const base = createFPSGame('Графический замер', '#e78064', 314159);
+const STUDIO_VARIANTS: Array<[CharacterVariant, string]> = [['base', 'База']];
+const STUDIO_ANIMATIONS: Array<[CharacterAnimation, string]> = [['idle', 'Ожидание'], ['walk', 'Ходьба'], ['run', 'Бег'], ['carry', 'Перенос'], ['react', 'Реакция']];
+const STUDIO_VIEWS = {
+  'Спереди': [0, 1.18, 2.65], 'Сбоку': [2.65, 1.18, 0], 'Три четверти': [1.6, 1.2, 1.9], 'Игровая дистанция': [0, 1.67, 6],
+} satisfies Record<string, Vec3>;
+type StudioView = keyof typeof STUDIO_VIEWS;
+
+function CharacterStudio({ variant, animation, view, paused, step, reaction }: {
+  variant: CharacterVariant; animation: CharacterAnimation; view: StudioView; paused: boolean; step: number; reaction: number;
+}) {
+  const actor = useRef<Group>(null), sun = useRef<DirectionalLight>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, distance: 0, animation });
+  const timeline = useRef(0), lastStep = useRef(step);
+  useEffect(() => { timeline.current = 0; }, [animation, reaction]);
+  useFrame(({ camera }, delta) => {
+    if (!paused) timeline.current += Math.min(delta, .05);
+    if (step !== lastStep.current) { timeline.current += .125 * (step - lastStep.current); lastStep.current = step; }
+    const speed = animation === 'run' ? 2.5 : animation === 'walk' ? 1.05 : animation === 'carry' ? .8 : 0;
+    motion.current.speed = speed; motion.current.animation = animation; motion.current.distance = timeline.current * speed; motion.current.previewTime = timeline.current;
+    // The camera follows an actual translating parent. The grid repeats every two metres,
+    // so the 16 m loop has no visible jump and planted feet can be inspected against it.
+    const z = motion.current.distance % 16;
+    if (actor.current) actor.current.position.z = z;
+    const position = STUDIO_VIEWS[view];
+    camera.position.set(position[0], position[1], position[2] + z); camera.lookAt(0, 1, z);
+    if (sun.current) {
+      sun.current.position.set(-4, 7, z + 5); sun.current.target.position.set(0, 1, z); sun.current.target.updateMatrixWorld();
+    }
+  }, -3);
+  return <>
+    <color attach="background" args={['#e4e9d7']} />
+    <hemisphereLight args={['#eef1dd', '#9ba68a', 1.7]} />
+    <directionalLight ref={sun} position={[-4, 7, 5]} intensity={2.6} color="#fff0d2" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-5} shadow-camera-right={5} shadow-camera-top={5} shadow-camera-bottom={-5} shadow-camera-near={.1} shadow-camera-far={18} shadow-bias={-.0002} shadow-normalBias={.018} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[160, 160]} /><meshStandardMaterial color="#cdd3bc" roughness={1} /></mesh>
+    <gridHelper args={[160, 80, '#b7c0a8', '#bec6ae']} position={[0, .002, 0]} />
+    <group ref={actor}>
+      <Character key={`${variant}:${animation}`} variant={variant} animation={animation} motion={motion.current} reactionToken={animation === 'react' ? reaction : undefined} />
+      {animation === 'carry' && <group position={[0, 1.02, .58]}>
+        <mesh castShadow receiveShadow><boxGeometry args={[.86, .72, .66]} /><meshStandardMaterial color="#ba8d5b" roughness={.9} /></mesh>
+        {[-.27, .27].map(x => <mesh key={x} position={[x, 0, 0]} castShadow><boxGeometry args={[.065, .74, .68]} /><meshStandardMaterial color="#86623f" roughness={.95} /></mesh>)}
+        <mesh position={[0, 0, .34]}><boxGeometry args={[.27, .23, .012]} /><meshStandardMaterial color="#e8d9b6" roughness={.9} /></mesh>
+      </group>}
+    </group>
+  </>;
+}
 
 function ReviewMotion({ pose, running, started, run }: { pose: Pose; running: boolean; started: number; run: number }) {
   const body = useRef<RapierRigidBody>(null);
@@ -85,6 +134,9 @@ export default function ReviewApp() {
   const [state, setState] = useState(base);
   const [run, setRun] = useState(0), [running, setRunning] = useState(false), [started, setStarted] = useState(0);
   const [metrics, setMetrics] = useState<BenchmarkMetrics | null>(null), [json, setJson] = useState(false);
+  const [studio, setStudio] = useState(false), [variant, setVariant] = useState<CharacterVariant>('base');
+  const [animation, setAnimation] = useState<CharacterAnimation>('idle'), [view, setView] = useState<StudioView>('Три четверти');
+  const [paused, setPaused] = useState(false), [step, setStep] = useState(0), [reaction, setReaction] = useState(0);
   const reactMeasurements = useRef<ReactMeasurements>({ commits: 0, durationMs: 0 });
   const pose = REVIEW_POSES[poseName];
   useEffect(() => {
@@ -103,24 +155,37 @@ export default function ReviewApp() {
   const buttonStyle = { border: '1px solid #b8c5bb', background: '#fff9e8', color: '#284d49', borderRadius: 5, padding: '7px 10px', cursor: 'pointer', font: '600 12px system-ui' };
   return <main style={{ position: 'fixed', inset: 0, background: '#bed9d4', fontFamily: 'system-ui, sans-serif' }}>
     <Canvas shadows dpr={1.5} camera={{ fov: 70, near: .05, far: 180, position: pose.position }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
-      <Suspense fallback={null}><Physics timeStep={1 / 60}>
+      <Suspense fallback={null}>{studio ? <CharacterStudio variant={variant} animation={animation} view={view} paused={paused} step={step} reaction={reaction} /> : <Physics timeStep={1 / 60}>
         <Profiler id="Neighborhood" onRender={(_id, _phase, actualDuration) => { reactMeasurements.current.commits++; reactMeasurements.current.durationMs += actualDuration; }}>
           <Neighborhood state={state} />
         </Profiler>
         <ReviewMotion pose={pose} run={run} running={running} started={started} />
         <Diagnostics run={run} reactMeasurements={reactMeasurements} onSample={setMetrics} onComplete={() => setRunning(false)} />
-      </Physics></Suspense>
+      </Physics>}</Suspense>
     </Canvas>
     <nav aria-label="Ракурсы проверки" style={{ position: 'absolute', top: 10, left: 10, right: 10, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-      {Object.keys(REVIEW_POSES).map(name => <button style={{ ...buttonStyle, background: name === poseName ? '#d5e7ce' : buttonStyle.background }} disabled={running} key={name} onClick={() => select(name)}>{name}</button>)}
+      <button style={{ ...buttonStyle, background: studio ? '#d5e7ce' : buttonStyle.background }} disabled={running} onClick={() => { setStudio(value => !value); setJson(false); }}>Персонажи</button>
+      {!studio && <>{Object.keys(REVIEW_POSES).map(name => <button style={{ ...buttonStyle, background: name === poseName ? '#d5e7ce' : buttonStyle.background }} disabled={running} key={name} onClick={() => select(name)}>{name}</button>)}
       <button style={buttonStyle} disabled={running || !metrics} onClick={start}>{running ? 'Замер идёт…' : 'Замер 30 с'}</button>
       <button style={buttonStyle} onClick={() => setJson(value => !value)}>JSON</button>
-      <button style={buttonStyle} disabled={!metrics} onClick={exportJson}>Скачать JSON</button>
+      <button style={buttonStyle} disabled={!metrics} onClick={exportJson}>Скачать JSON</button></>}
+      {studio && <>
+        {STUDIO_VARIANTS.map(([id, label]) => <button style={{ ...buttonStyle, background: variant === id ? '#d5e7ce' : buttonStyle.background }} key={id} onClick={() => setVariant(id)}>{label}</button>)}
+        {STUDIO_ANIMATIONS.map(([id, label]) => <button style={{ ...buttonStyle, background: animation === id ? '#d5e7ce' : buttonStyle.background }} key={id} onClick={() => { setAnimation(id); if (id === 'react') setReaction(value => value + 1); }}>{label}</button>)}
+        <span style={{ flexBasis: '100%' }} />
+        {(Object.keys(STUDIO_VIEWS) as StudioView[]).map(name => <button style={{ ...buttonStyle, background: view === name ? '#d5e7ce' : buttonStyle.background }} key={name} onClick={() => setView(name)}>{name}</button>)}
+        <button style={buttonStyle} onClick={() => setPaused(value => !value)}>{paused ? 'Продолжить' : 'Пауза'}</button>
+        <button style={buttonStyle} onClick={() => { setPaused(true); setStep(value => value + 1); }}>Шаг ⅛ с</button>
+      </>}
     </nav>
     <div style={{ position: 'absolute', bottom: 10, left: 10, padding: '8px 12px', maxWidth: 610, color: '#fff', background: '#173d39dd', borderRadius: 6, fontSize: 12 }}>
-      <strong>Синтетический графический замер · не плейтест</strong><br />
+      {studio ? <><strong>Студия персонажа · {STUDIO_VARIANTS.find(([id]) => id === variant)?.[1]}</strong><br />
+        Высота около 1,85 м · сетка 2 м · движение родителя связано с длиной шага.<br />
+        Пауза фиксирует всю позу. «Шаг ⅛ с» сдвигает её на 0,125 с.
+      </> : <><strong>Синтетический графический замер · не плейтест</strong><br />
       {running ? '0–12 с: маршрут и NPC · 12–18 с: ящик · 18 с: бросок · 24 с: гроза' : 'Фиксированные ракурсы · камера 70° · DPR 1.5 · без игровых сохранений'}
       {metrics && <div data-testid="benchmark-status">{metrics.status} · {metrics.durationSeconds} с · {metrics.fps ?? '—'} FPS · p95 {metrics.frameMs?.p95 ?? '—'} мс · {metrics.drawCalls?.p50 ?? '—'} calls · {metrics.triangles?.p50 ?? '—'} triangles</div>}
+      <div>Видимость DOM не гарантирует отсутствие ограничения частоты браузером.</div></>}
     </div>
     {json && <pre data-testid="benchmark-json" style={{ position: 'absolute', top: 60, right: 10, bottom: 10, width: 440, overflow: 'auto', padding: 14, margin: 0, background: '#14332fef', color: '#e8f2df', fontSize: 11 }}>{JSON.stringify(metrics, null, 2)}</pre>}
   </main>;
