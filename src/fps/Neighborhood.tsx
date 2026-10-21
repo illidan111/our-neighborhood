@@ -8,12 +8,14 @@ import { TARGET_POSITIONS, type WorldPoint } from './landmarks';
 import { StaticBatch, StaticPrimitive, Unbatched } from './StaticBatch';
 import { Character } from './Character';
 import type { CharacterMotion } from './Character';
+import { GRAPHICS } from './quality';
+import type { GraphicsQuality } from './quality';
 
 const C = {
-  grass: '#8eb965', grassLight: '#afc97d', grassDark: '#6d9d62', cream: '#f5e5bc',
-  trim: '#fff3d6', coral: '#dd7858', roofDark: '#b65c48', teal: '#4b9e96',
-  dark: '#345b58', wood: '#a97950', lightWood: '#d6ab70', path: '#dac59d',
-  stone: '#a5b29b', water: '#65b9c0', yellow: '#f4c767', ink: '#345452',
+  grass: '#8ea96d', grassLight: '#a5b97d', grassDark: '#557954', cream: '#ead9b9',
+  trim: '#f5e8ce', coral: '#bd7557', roofDark: '#895744', teal: '#608f89',
+  dark: '#354e50', wood: '#936c4b', lightWood: '#c59e70', path: '#bcb7a0',
+  stone: '#a6ada7', water: '#579da9', yellow: '#dfb768', ink: '#34494a',
 };
 type Vec3 = [number, number, number];
 
@@ -79,6 +81,15 @@ function Roof({ position, width, depth, height = 1.6, color = C.coral }: { posit
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <RigidBody type="fixed" colliders="trimesh" position={position}>
     <mesh geometry={geometry} castShadow receiveShadow><meshStandardMaterial color={color} side={THREE.DoubleSide} flatShading roughness={0.86} /></mesh>
+    <Box position={[0, height + 0.035, 0]} size={[0.18, 0.16, depth + 0.18]} color={C.roofDark} />
+    {[-1, 1].map(side => <group key={side}>
+      <Box position={[side * width / 2, -0.025, 0]} size={[0.14, 0.16, depth + 0.15]} color={C.roofDark} />
+      {Array.from({ length: 4 }, (_, i) => {
+        const t = (i + 1) / 5;
+        return <Box key={i} position={[side * width / 2 * t, height * (1 - t) + 0.025, 0]} size={[0.065, 0.045, depth]} color={i % 2 ? C.roofDark : '#d08a65'} castShadow={false} />;
+      })}
+      {[-1, 1].map(end => <Box key={end} position={[side * width / 4, height / 2, end * (depth / 2 + 0.025)]} size={[Math.hypot(width / 2, height), 0.14, 0.13]} rotation={[0, 0, -side * Math.atan2(height, width / 2)]} color={C.roofDark} />)}
+    </group>)}
   </RigidBody>;
 }
 
@@ -89,6 +100,11 @@ function Window({ position, rotation = [0, 0, 0], powered = false, width = 1.6, 
     <Box position={[0, 0, 0.12]} size={[0.065, height, 0.06]} color={C.trim} />
     <Box position={[0, 0, 0.12]} size={[width, 0.065, 0.06]} color={C.trim} />
     <Box position={[0, -height / 2 - 0.1, 0.2]} size={[width + 0.35, 0.12, 0.4]} color={C.lightWood} />
+    {[-1, 1].map(side => <group key={side} position={[side * (width / 2 + 0.25), 0, 0.04]}>
+      <Box size={[0.28, height + 0.1, 0.11]} color={C.teal} />
+      <Box position={[0, height * 0.34, 0.07]} size={[0.3, 0.055, 0.05]} color={C.dark} />
+      <Box position={[0, -height * 0.34, 0.07]} size={[0.3, 0.055, 0.05]} color={C.dark} />
+    </group>)}
   </group>;
 }
 
@@ -199,7 +215,7 @@ function Shop({ powered, aftermath }: { powered: boolean; aftermath: boolean }) 
     <Box position={[-16, 1.12, -8.82]} size={[1.2, 2.24, 0.2]} color={C.dark} />
     <Box position={[-16, 1.65, -8.7]} size={[0.92, 0.9, 0.035]} color={powered ? '#ffd696' : '#88b9ad'} />
     <Cylinder position={[-15.57, 0.99, -8.62]} radius={0.055} height={0.05} color={C.yellow} rotation={[Math.PI / 2, 0, 0]} />
-    <TextPlate lines={['У БОРИСА']} width={3.9} height={0.75} position={[-16, 3.79, -8.58]} background={C.trim} />
+    <TextPlate lines={['ПРОДУКТЫ · У БОРИСА']} width={4.4} height={0.75} position={[-16, 3.79, -8.58]} background={C.wood} ink={C.trim} />
     <TextPlate lines={[powered ? 'ХОЛОДИЛЬНИК РАБОТАЕТ' : aftermath ? 'ПРОДУКТЫ БЕЗ ХОЛОДА' : 'НУЖНО ПИТАНИЕ']} width={2.45} height={0.4} position={[-18.3, 0.81, -8.62]} background={powered ? '#c9dda2' : C.yellow} />
     {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => <Box key={i} position={[-20 + i, 2.72, -8.05]} size={[1, 0.1, 1.9]} color={i % 2 ? C.trim : C.coral} rotation={[-0.1, 0, 0]} />)}
     {[-20.1, -11.9].map(x => <SolidBox key={x} position={[x, 1.29, -7.3]} size={[0.09, 2.58, 0.09]} color={C.trim} />)}
@@ -231,8 +247,16 @@ function Generator() {
 }
 
 function Path({ from, to, width = 3.3 }: { from: [number, number]; to: [number, number]; width?: number }) {
-  const dx = to[0] - from[0], dz = to[1] - from[1];
-  return <Box position={[(from[0] + to[0]) / 2, 0.012, (from[1] + to[1]) / 2]} size={[width, 0.018, Math.hypot(dx, dz)]} rotation={[0, Math.atan2(dx, dz), 0]} color={C.path} />;
+  const dx = to[0] - from[0], dz = to[1] - from[1], length = Math.hypot(dx, dz);
+  const rows = Math.max(1, Math.floor(length / 0.95)), columns = Math.max(2, Math.round(width / 0.85));
+  return <group position={[(from[0] + to[0]) / 2, 0, (from[1] + to[1]) / 2]} rotation={[0, Math.atan2(dx, dz), 0]}>
+    <Box position={[0, 0.012, 0]} size={[width, 0.018, length]} color="#9aa47d" castShadow={false} />
+    {Array.from({ length: rows * columns }, (_, i) => {
+      const row = Math.floor(i / columns), column = i % columns;
+      const jitter = Math.sin(row * 9.13 + column * 4.97 + from[0]);
+      return <StaticPrimitive key={i} shape="paver" position={[(column + 0.5) / columns * width - width / 2 + jitter * 0.07, 0.032, (row + 0.5) / rows * length - length / 2 + jitter * 0.05]} scale={[width / columns * 0.51, 0.045, length / rows * 0.51]} rotation={[0, jitter * 0.22, 0]} color={['#c5c2af', '#b5b7a8', '#d0c8b1', '#bcbba8'][(row + column) % 4]} castShadow={false} />;
+    })}
+  </group>;
 }
 
 function Tree({ position, scale = 1, autumn = false, shape = 0 }: { position: Vec3; scale?: number; autumn?: boolean; shape?: number }) {
@@ -241,9 +265,9 @@ function Tree({ position, scale = 1, autumn = false, shape = 0 }: { position: Ve
     <group scale={scale}>
       <Cylinder position={[0, 1.25, 0]} radius={0.17} bottom={0.26} height={2.5} sides={6} />
       <Cylinder position={[0.3, 2.1, 0]} radius={0.09} height={1.1} sides={5} rotation={[0, 0, -0.65]} />
-      <Boulder position={[0, 3.7, 0]} scale={shape ? [1.4, 2.3, 1.3] : [1.85, 1.7, 1.7]} color={autumn ? '#e6b75c' : '#81af64'} />
-      <Boulder position={[-0.85, 3.15, 0.1]} scale={[1.2, 1.2, 1.3]} color={autumn ? '#d39b57' : '#699b59'} />
-      <Boulder position={[0.7, 3.25, 0.45]} scale={[1.1, 1.35, 1.2]} color={autumn ? '#efc66b' : '#a6c673'} />
+      <StaticPrimitive shape="leaf" position={[0, 3.7, 0]} scale={shape ? [1.4, 2.3, 1.3] : [1.85, 1.7, 1.7]} color={autumn ? '#c6b46b' : '#7d9c5c'} />
+      <StaticPrimitive shape="leaf" position={[-0.85, 3.15, 0.1]} scale={[1.2, 1.2, 1.3]} color={autumn ? '#b6a264' : '#62834e'} />
+      <StaticPrimitive shape="leaf" position={[0.7, 3.25, 0.45]} scale={[1.1, 1.35, 1.2]} color={autumn ? '#d5c17c' : '#a0b574'} />
     </group>
   </RigidBody>;
 }
@@ -257,12 +281,56 @@ function Fence({ from, to, color = C.lightWood }: { from: [number, number]; to: 
   </RigidBody>;
 }
 
-function FlowerPatch({ x, z, color = C.yellow }: { x: number; z: number; color?: string }) {
-  return <group position={[x, 0, z]}>
-    {[[-0.3, 0.05], [0.2, 0.25], [0.05, -0.2]].map(([dx, dz], i) => <group key={i} position={[dx, 0, dz]}>
-      <Cylinder radius={0.018} height={0.3 + i * 0.06} position={[0, 0.15, 0]} color={C.grassDark} sides={4} castShadow={false} />
-      <Boulder position={[0, 0.33 + i * 0.035, 0]} scale={[0.13, 0.08, 0.13]} color={color} castShadow={false} />
+function FlowerPatch({ x, z, y = 0, color = '#c4b3d4', sparse = false }: { x: number; z: number; y?: number; color?: string; sparse?: boolean }) {
+  return <group position={[x, y, z]}>
+    {Array.from({ length: sparse ? 4 : 8 }, (_, i) => {
+      const a = i * 2.4, radius = Math.sqrt(i + 1) * 0.21, height = 0.27 + (i % 3) * 0.09;
+      return <group key={i} position={[Math.cos(a) * radius, 0, Math.sin(a) * radius]}>
+        <StaticPrimitive shape="grass" scale={[0.35, height * 1.15, 0.35]} rotation={[0, a, 0]} color={i % 2 ? '#668653' : '#839c5e'} castShadow={false} />
+        <Cylinder radius={0.009} height={height} position={[0, height / 2, 0]} color={C.grassDark} sides={4} castShadow={false} />
+        <StaticPrimitive shape="flower" position={[0, height, 0]} scale={[0.13, 0.13, 0.13]} rotation={[0.12, a, 0.22]} color={i % 3 === 0 ? '#f1e9d4' : color} castShadow={false} />
+        <Boulder position={[0, height + 0.011, 0]} scale={[0.027, 0.019, 0.027]} color="#d6b66c" castShadow={false} />
+      </group>;
+    })}
+  </group>;
+}
+
+/** A small optional side garden: four fixed step/platform colliders, outside all task paths. */
+function GardenTerrace() {
+  return <group>
+    <SolidBox position={[-26, 0.3, 2]} size={[5, 0.6, 5]} color={C.stone} />
+    <Box position={[-26, 0.605, 2]} size={[4.9, 0.02, 4.9]} color={C.grassLight} castShadow={false} />
+    {[0, 1, 2].map(i => <SolidBox key={i} position={[-22.05 - i * 0.65, (i + 1) * 0.075, 2]} size={[0.68, (i + 1) * 0.15, 2]} color={i % 2 ? '#b7b8ab' : '#c9c6b5'} />)}
+    {[-0.35, 4.35].map(z => <Box key={z} position={[-26, 0.7, z]} size={[5.1, 0.18, 0.28]} color="#bdc0b2" />)}
+    {Array.from({ length: 12 }, (_, i) => <Box key={i} position={[-23.485, 0.12 + Math.floor(i / 6) * 0.28, -0.13 + (i % 6) * 0.83]} size={[0.04, 0.23, 0.76]} color={i % 3 ? '#b7b8ac' : '#9baba2'} />)}
+    <FlowerPatch x={-27.3} z={0.7} y={0.62} color="#d4a6ad" />
+    <FlowerPatch x={-27.3} z={3.5} y={0.62} color="#b9abd2" />
+    <TextPlate lines={['САД СОСЕДЕЙ']} width={1.6} height={0.36} position={[-27.7, 1.52, 2]} rotation={[0, Math.PI / 2, 0]} />
+    <Box position={[-27.7, 1.1, 2]} size={[0.1, 0.95, 0.12]} color={C.wood} />
+  </group>;
+}
+
+function RouteGardens({ quality }: { quality: GraphicsQuality }) {
+  const beds: [number, number, string][] = [
+    [-17.6, 5, '#d2a4ab'], [-17.8, 2.5, '#cab5d4'], [-17.9, -0.3, '#cab5d4'], [-18.1, -3, '#d9b68c'],
+    [-11.7, 4.6, '#e2c69a'], [-11.8, 1.7, '#d5b0c0'], [-20.1, -5.3, '#d2a4ab'], [-18.2, -5.8, '#d5b0c0'],
+    [6.8, 5.7, '#c0b3d5'], [9, 6.3, '#d4b2c8'], [12, 6.5, '#c0b3d5'], [15.2, 6.5, '#c0b3d5'],
+    [17.5, 2, '#e8d6ab'], [9.4, -8.4, '#d2bd88'], [14.8, -9, '#d2bd88'], [16.7, -11.7, '#e8d6ab'],
+  ];
+  return <group>
+    {beds.map(([x, z, color], i) => <group key={i}>
+      <FlowerPatch x={x} z={z} color={color} sparse={quality === 'low'} />
+      {quality !== 'low' && <FlowerPatch x={x + 0.8} z={z + 0.45} color={color} />}
+      {[-1, 1].map(side => <StaticPrimitive key={side} shape="grass" position={[x + side * 0.78, 0.02, z - 0.45]} scale={[0.65, 0.5, 0.65]} rotation={[0, i * 1.7, 0]} color={i % 2 ? '#8ba367' : '#708d54'} castShadow={false} />)}
     </group>)}
+    <GardenTerrace />
+    {/* Window boxes and an entrance lintel leave the 2.2 m doorway fully clear. */}
+    {[-16.6, -11.5].map(x => <group key={x}>
+      <Box position={[x, 1.0, 9.63]} size={[1.85, 0.3, 0.42]} color={C.wood} />
+      <FlowerPatch x={x} z={9.6} y={1.16} sparse color="#d7a9b2" />
+    </group>)}
+    <Box position={[-14, 2.74, 9.63]} size={[2.75, 0.22, 0.42]} color={C.wood} />
+    <Box position={[-16, 0.035, -6.3]} size={[3.8, 0.05, 1.8]} color={C.stone} castShadow={false} />
   </group>;
 }
 
@@ -399,6 +467,7 @@ const TREES: [number, number, number, boolean?][] = [
 
 function Scenery() {
   return <group>
+    {[-52, -25, 3, 31, 58].map((x, i) => <StaticPrimitive key={`mountain-${i}`} shape="mountain" position={[x, -2, -68 - (i % 2) * 8]} scale={[25, 23 + (i % 3) * 7, 21]} rotation={[0, i * 0.47, 0]} color={i % 2 ? '#a2b9ba' : '#91acae'} castShadow={false} receiveShadow={false} />)}
     {TREES.map(([x, z, scale, autumn], i) => <Tree key={i} position={[x, 0, z]} scale={scale} autumn={autumn} shape={i % 3 === 0 ? 1 : 0} />)}
     {[-33, -22, -10, 4, 18, 32].flatMap((x, i) => [-38, 47].map((z, j) => <Boulder key={`${x}:${z}`} position={[x, -2.5, z]} scale={[12, 8 + (i % 3) * 2, 10]} color={j ? '#90b48a' : '#8cae94'} castShadow={false} />))}
     {[-24, -7, 13, 30].map((z, i) => <Boulder key={z} position={[-50, -2, z]} scale={[13, 9 + i, 14]} color="#a7bf8f" castShadow={false} />)}
@@ -424,75 +493,88 @@ function Scenery() {
   </group>;
 }
 
-function Weather({ phase }: { phase: FPSState['phase'] }) {
+function Weather({ phase, quality }: { phase: FPSState['phase']; quality: GraphicsQuality }) {
   const { scene } = useThree();
   const sun = useRef<THREE.DirectionalLight>(null), ambient = useRef<THREE.HemisphereLight>(null), rain = useRef<THREE.LineSegments>(null), water = useRef<THREE.Mesh>(null);
-  const blend = useRef(0);
+  const blend = useRef(0), rainfall = useRef(0);
+  const qualitySettings = GRAPHICS[quality];
   const rainGeometry = useMemo(() => {
     const vertices: number[] = [];
-    for (let i = 0; i < 650; i++) {
+    for (let i = 0; i < qualitySettings.rainCount; i++) {
       const x = Math.sin(i * 73.17) * 37, z = Math.sin(i * 41.37 + 8) * 34, y = ((i * 17.217) % 15);
       const underRoof = (x > -18.6 && x < -9.4 && z > 9.4 && z < 20.6)
         || (x > -21 && x < -11 && z > -18 && z < -7)
         || (x > 8.5 && x < 15.5 && z > -18 && z < -11);
       if (underRoof) continue;
-      vertices.push(x, y, z, x - 0.12, y + 0.63, z - 0.03);
+      vertices.push(x, y, z, x - 0.23, y + 0.74, z - 0.07);
     }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); return geo;
-  }, []);
+  }, [qualitySettings.rainCount]);
   useEffect(() => {
-    scene.background = new THREE.Color('#b7d9d5'); scene.fog = new THREE.Fog('#b7d9d5', 37, 105);
+    scene.background = new THREE.Color('#c1dce4'); scene.fog = new THREE.Fog('#c1dce4', 40, 122);
     return () => { scene.fog = null; rainGeometry.dispose(); };
   }, [scene, rainGeometry]);
-  const sky = useMemo(() => new THREE.Color(), []), sunColor = useMemo(() => new THREE.Color('#b7d9d5'), []), stormColor = useMemo(() => new THREE.Color('#778d99'), []);
+  useEffect(() => {
+    // Three allocates a shadow target lazily; changing mapSize alone does not resize it.
+    if (sun.current) { sun.current.shadow.map?.dispose(); sun.current.shadow.map = null; }
+  }, [quality]);
+  const sky = useMemo(() => new THREE.Color(), []), sunColor = useMemo(() => new THREE.Color('#c1dce4'), []), stormColor = useMemo(() => new THREE.Color('#7c909e'), []);
   useFrame(({ clock }, delta) => {
     const target = phase === 'storm' ? 1 : phase === 'aftermath' ? 0.27 : 0;
     blend.current = THREE.MathUtils.damp(blend.current, target, 0.65, delta);
     sky.copy(sunColor).lerp(stormColor, blend.current);
     (scene.background as THREE.Color)?.copy(sky);
-    if (scene.fog instanceof THREE.Fog) { scene.fog.color.copy(sky); scene.fog.near = 37 - blend.current * 17; scene.fog.far = 105 - blend.current * 41; }
-    if (sun.current) sun.current.intensity = 2.3 - blend.current * 1.6;
-    if (ambient.current) ambient.current.intensity = 1.8 - blend.current * 0.35;
+    if (scene.fog instanceof THREE.Fog) { scene.fog.color.copy(sky); scene.fog.near = 40 - blend.current * 13; scene.fog.far = 122 - blend.current * 37; }
+    if (sun.current) sun.current.intensity = 2.15 - blend.current * 1.4;
+    if (ambient.current) ambient.current.intensity = 1.45 - blend.current * 0.12;
+    rainfall.current = THREE.MathUtils.damp(rainfall.current, phase === 'storm' ? 1 : 0, 0.85, delta);
     if (rain.current) {
-      rain.current.visible = blend.current > 0.06;
       rain.current.position.y = -((clock.elapsedTime * 7) % 9);
-      (rain.current.material as THREE.LineBasicMaterial).opacity = blend.current * (phase === 'aftermath' ? 0.15 : 0.45);
+      (rain.current.material as THREE.LineBasicMaterial).opacity = rainfall.current * 0.48;
     }
     if (water.current) water.current.position.y = -0.2 + blend.current * 0.12 + Math.sin(clock.elapsedTime * 1.2) * 0.012;
   });
   return <>
-    <hemisphereLight ref={ambient} args={['#d7ece8', '#9ba878', 1.8]} />
-    <directionalLight ref={sun} position={[-18, 29, 15]} intensity={2.3} color="#fff1d2" castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={40} shadow-camera-bottom={-40} shadow-camera-near={1} shadow-camera-far={85} shadow-bias={-0.00025} shadow-normalBias={0.025} />
+    <hemisphereLight ref={ambient} args={['#dce5f0', '#b5aaa0', 1.45]} />
+    <directionalLight ref={sun} position={[-18, 29, 15]} intensity={2.15} color="#fff0d6" castShadow={qualitySettings.shadowMap > 0} shadow-mapSize={[qualitySettings.shadowMap || 512, qualitySettings.shadowMap || 512]} shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={40} shadow-camera-bottom={-40} shadow-camera-near={1} shadow-camera-far={85} shadow-bias={-0.00025} shadow-normalBias={0.025} />
     <mesh ref={water} position={[24.5, -0.2, 3]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[5, 73]} /><meshStandardMaterial color={C.water} roughness={0.3} metalness={0.1} transparent opacity={0.9} /></mesh>
     {Array.from({ length: 22 }, (_, i) => <Box key={i} position={[22.7 + (i % 4) * 0.95, -0.183, -27 + i * 3]} size={[0.55 + (i % 3) * 0.18, 0.008, 0.04]} color="#b4dce0" castShadow={false} />)}
-    <lineSegments ref={rain} geometry={rainGeometry} visible={false}><lineBasicMaterial color="#cfdfec" transparent opacity={0} depthWrite={false} /></lineSegments>
+    <lineSegments ref={rain} geometry={rainGeometry}><lineBasicMaterial color="#cfdfec" transparent opacity={0} depthWrite={false} /></lineSegments>
     {[[-15, 18, -30], [18, 21, -39], [32, 19, 15], [-32, 20, 12]].map(([x, y, z], i) => <group key={i} position={[x, y, z]}>
       <Boulder position={[0, 0, 0]} scale={[5, 1.5, 2.2]} color="#e9eee0" castShadow={false} /><Boulder position={[3, 0.3, 0]} scale={[3, 1.7, 2]} color="#e9eee0" castShadow={false} />
     </group>)}
   </>;
 }
 
+const StaticScenery = memo(Scenery);
+const StaticRouteGardens = memo(RouteGardens);
+const StableHome = memo(Home);
+const StableShop = memo(Shop);
+const StaticGenerator = memo(Generator);
+const StableBridge = memo(Bridge);
+
 /** Static environment and remote participant presentation; the local controller owns movement/items. */
-function Neighborhood({ state }: { state: FPSState }) {
+function Neighborhood({ state, quality = 'high' }: { state: FPSState; quality?: GraphicsQuality }) {
   const homePowered = state.batteryAt === 'home', shopPowered = state.batteryAt === 'shop';
-  return <StaticBatch>
-    <Weather phase={state.phase} />
+  return <StaticBatch storm={state.phase === 'storm'}>
+    <Weather phase={state.phase} quality={quality} />
     <SolidBox position={[-8, -0.5, 4]} size={[60, 1, 68]} color={C.grass} />
     <SolidBox position={[32.5, -0.5, 4]} size={[11, 1, 68]} color={C.grass} />
     <SolidBox position={[24.5, -1.3, 4]} size={[5, 1, 68]} color="#a9a879" />
     <Box position={[-15, 0.006, 4]} size={[15, 0.01, 8]} color={C.grassLight} />
-    <Box position={[9, 0.006, 3]} size={[13, 0.01, 17]} color="#a0be73" />
+    <Box position={[9, 0.006, 3]} size={[13, 0.01, 17]} color="#98ae73" />
     <Path from={[-14, 10]} to={[-14, 6]} /><Path from={[-14, 6]} to={[-3, 0]} />
     <Path from={[-16, -8]} to={[-10, -4]} /><Path from={[-10, -4]} to={[0, 0]} />
     <Path from={[0, 0]} to={[12, -8]} /><Path from={[12, -8]} to={[12, -11.5]} />
     <Path from={[3, 1]} to={[10, 4]} /><Path from={[10, 4]} to={[21, 4]} />
     <Path from={[-16, -6]} to={[-14, 7]} width={2.5} />
-    <Home powered={homePowered} supplies={state.deliveredSupplies} />
-    <Shop powered={shopPowered} aftermath={state.phase === 'aftermath'} />
-    <Generator />
+    <StableHome powered={homePowered} supplies={state.deliveredSupplies} />
+    <StableShop powered={shopPowered} aftermath={state.phase === 'aftermath'} />
+    <StaticGenerator />
     <Plaza storm={state.phase === 'storm'} />
-    <Bridge repaired={state.bridgeRepaired} aftermath={state.phase === 'aftermath'} />
-    <Scenery />
+    <StableBridge repaired={state.bridgeRepaired} aftermath={state.phase === 'aftermath'} />
+    <StaticScenery />
+    <StaticRouteGardens quality={quality} />
     <Unbatched>
       <NPC id="nina" position={TARGET_POSITIONS.nina} happy={homePowered} />
       <NPC id="boris" position={TARGET_POSITIONS.boris} happy={shopPowered} />
@@ -505,4 +587,5 @@ function Neighborhood({ state }: { state: FPSState }) {
 export default memo(Neighborhood, (before, after) => before.state.phase === after.state.phase
   && before.state.batteryAt === after.state.batteryAt
   && before.state.deliveredSupplies === after.state.deliveredSupplies
-  && before.state.bridgeRepaired === after.state.bridgeRepaired);
+  && before.state.bridgeRepaired === after.state.bridgeRepaired
+  && before.quality === after.quality);
