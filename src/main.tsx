@@ -13,10 +13,14 @@ import "./fps/fps.css";
 
 // Explicit isolated review mode: no player save is loaded or changed.
 const ReviewApp = React.lazy(() => import('./fps/ReviewApp'));
+const CameraReview = React.lazy(() => import('./fps/CameraReview'));
+const HeroStudio = React.lazy(() => import('./fps/HeroStudio'));
 const reviewing = new URLSearchParams(window.location.search).get('review') === '1';
+const cameraReviewing = new URLSearchParams(window.location.search).get('cameraReview') === '1';
+const heroStudio = new URLSearchParams(window.location.search).get('heroStudio') === '1';
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {reviewing ? <React.Suspense fallback={<p>Подготовка измерений…</p>}><ReviewApp /></React.Suspense> : <App />}
+    {heroStudio ? <React.Suspense fallback={<p>Подготовка студии героя…</p>}><HeroStudio /></React.Suspense> : cameraReviewing ? <React.Suspense fallback={<p>Подготовка проверки камеры…</p>}><CameraReview /></React.Suspense> : reviewing ? <React.Suspense fallback={<p>Подготовка измерений…</p>}><ReviewApp /></React.Suspense> : <App />}
   </React.StrictMode>,
 );

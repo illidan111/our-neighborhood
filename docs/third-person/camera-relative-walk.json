@@ -1,0 +1,33 @@
+{
+  "fixture": "Площадь",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": null,
+  "held": null,
+  "phase": "preparation",
+  "supplies": false,
+  "batteryAt": null,
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      3.511,
+      0.915,
+      5.001
+    ],
+    "yaw": -1.5707963267948966,
+    "pitch": -0.25,
+    "grounded": true,
+    "cameraPosition": [
+      -0.559,
+      2.504,
+      5.001
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 1.5714527436563905
+  },
+  "sampledHeightRange": {
+    "minY": 0.915096640586853,
+    "maxY": 1
+  },
+  "lastAction": "Движение: 30 шагов × 1/60 с"
+}

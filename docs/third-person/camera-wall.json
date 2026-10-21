@@ -1,0 +1,33 @@
+{
+  "fixture": "Стена",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": "note",
+  "held": null,
+  "phase": "preparation",
+  "supplies": false,
+  "batteryAt": null,
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      -14,
+      0.945,
+      18.411
+    ],
+    "yaw": 0,
+    "pitch": -0.2,
+    "grounded": true,
+    "cameraPosition": [
+      -14,
+      1.735,
+      19.596
+    ],
+    "cameraDistance": 1.208,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.944952130317688,
+    "maxY": 1
+  },
+  "lastAction": "Тестовая точка: Стена · новая партия в памяти"
+}
