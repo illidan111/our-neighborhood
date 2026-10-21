@@ -382,7 +382,7 @@ function NPC({ id, position, happy }: { id: 'nina' | 'boris' | 'mira'; position:
   return <RigidBody ref={body} type="kinematicPosition" colliders={false} position={position} userData={{ target: id }}>
     <CuboidCollider args={[0.33, 0.88, 0.3]} position={[0, 0.88, 0]} />
     <group ref={avatar} rotation={[0, restingAngle, 0]}>
-      <Character variant={id} motion={motion.current} reactionToken={happy ? 1 : undefined} />
+      <Character variant="base" color={bot.color} motion={motion.current} reactionToken={happy ? 1 : undefined} />
     </group>
     <TextPlate lines={[`${bot.name} · БОТ`]} position={[0, 2.2, 0]} width={1.05} height={0.24} background={C.trim} ink={C.ink} />
   </RigidBody>;
