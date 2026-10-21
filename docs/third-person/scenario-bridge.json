@@ -1,0 +1,33 @@
+{
+  "fixture": "Мост",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": "bridge_repair",
+  "held": null,
+  "phase": "preparation",
+  "supplies": true,
+  "batteryAt": "home",
+  "bridgeRepaired": true,
+  "pose": {
+    "position": [
+      19,
+      0.915,
+      6.2
+    ],
+    "yaw": 0,
+    "pitch": -0.35,
+    "grounded": true,
+    "cameraPosition": [
+      19,
+      2.905,
+      10.145
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.9149945974349976,
+    "maxY": 1
+  },
+  "lastAction": "E → bridge_repair"
+}

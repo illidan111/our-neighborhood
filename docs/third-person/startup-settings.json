@@ -1,0 +1,42 @@
+{
+  "buildMode": "production",
+  "origin": "http://127.0.0.1:4174",
+  "viewportCss": [
+    1699.3333740234375,
+    888
+  ],
+  "firstObservedLoad": {
+    "sceneReadyAtMs": 3103.2,
+    "shaderPreparationMs": 731.3,
+    "quality": "balanced",
+    "renderScale": 1,
+    "canvasBuffer": [
+      1699,
+      888
+    ]
+  },
+  "reloadAfterSettingHigh125": {
+    "sceneReadyAtMs": 2687.8,
+    "shaderPreparationMs": 878.0,
+    "quality": "high",
+    "renderScale": 1.25,
+    "canvasBuffer": [
+      2124,
+      1110
+    ],
+    "settingsRestoredInUI": true
+  },
+  "low75": {
+    "canvasBuffer": [
+      1274,
+      666
+    ]
+  },
+  "returnedTo": {
+    "quality": "balanced",
+    "renderScale": 1
+  },
+  "pointerLock": "Browser rejected automated request; visible recoverable message, no fake active state.",
+  "limitations": "First visit to the final production page, not a cache-cleared network benchmark. Shader preparation includes browser scheduling; quality and viewport differ from the 1080p route benchmark. Existing model cache/OS shader cache was not purged.",
+  "edgeVersion": "155.0.4283.62"
+}

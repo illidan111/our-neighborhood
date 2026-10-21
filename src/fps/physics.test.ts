@@ -51,7 +51,7 @@ describe("real Rapier character and portable-object physics", () => {
     expect(game.player.translation().z).toBeLessThan(-6);
   });
 
-  it("climbs a gentle ramp and steps onto a low doorstep", () => {
+  it("climbs a gentle ramp and stays grounded", () => {
     const game = fixture();
     const ramp = game.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0.8, -4)
       .setRotation({ x: Math.sin(0.09), y: 0, z: 0, w: Math.cos(0.09) }));
@@ -62,6 +62,33 @@ describe("real Rapier character and portable-object physics", () => {
     expect(game.player.translation().z).toBeLessThan(-5);
     expect(game.player.translation().y).toBeGreaterThan(1.8);
     expect(game.motion.grounded).toBe(true);
+  });
+
+  it("walks up all three GardenTerrace steps onto the platform without jumping", () => {
+    const game = fixture();
+    // Exact solid dimensions from Neighborhood.GardenTerrace: 0.15 m rises,
+    // 0.68 m treads, then a 0.6 m platform. Decorative meshes have no colliders.
+    const terrace = game.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(-26, 0.3, 2));
+    game.world.createCollider(RAPIER.ColliderDesc.cuboid(2.5, 0.3, 2.5), terrace);
+    for (let i = 0; i < 3; i++) {
+      const stair = game.world.createRigidBody(RAPIER.RigidBodyDesc.fixed()
+        .setTranslation(-22.05 - i * 0.65, (i + 1) * 0.075, 2));
+      game.world.createCollider(RAPIER.ColliderDesc.cuboid(0.34, (i + 1) * 0.075, 1), stair);
+    }
+    const floorY = game.player.translation().y;
+    const start = { x: -20.7, y: floorY, z: 2 };
+    game.player.setTranslation(start, true); game.player.setNextKinematicTranslation(start);
+    game.world.step();
+    game.input.yaw = Math.PI / 2; game.input.forward = 1;
+    game.step(80);
+    game.input.forward = 0; game.step(30);
+    const position = game.player.translation();
+    expect(position.x).toBeLessThan(-24.5);
+    expect(position.x).toBeGreaterThan(-28);
+    expect(position.z).toBeCloseTo(2, 3);
+    expect(position.y - floorY).toBeCloseTo(0.6, 2);
+    expect(game.motion.grounded).toBe(true);
+    expect(game.motion.verticalVelocity).toBe(0);
   });
 
   it("jumps once from the ground, cannot double jump, and lands", () => {

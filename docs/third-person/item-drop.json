@@ -1,0 +1,33 @@
+{
+  "fixture": "Ящик",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": null,
+  "held": null,
+  "phase": "preparation",
+  "supplies": false,
+  "batteryAt": null,
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      -9,
+      0.915,
+      -4.8
+    ],
+    "yaw": 0,
+    "pitch": -0.35,
+    "grounded": true,
+    "cameraPosition": [
+      -9,
+      2.905,
+      -0.854
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.9150700569152832,
+    "maxY": 1
+  },
+  "lastAction": "drop"
+}

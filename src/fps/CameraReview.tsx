@@ -14,7 +14,7 @@ export const CAMERA_REVIEW_FIXTURES: Record<string, Fixture> = {
   'Площадь': { position: [1.5, 1, 5], yaw: 0, pitch: -.25 },
   'Ящик': { position: [-9, 1, -4.8], yaw: 0, pitch: -.35 },
   'Генератор': { position: [12, 1, -7.8], yaw: 0, pitch: -.35 },
-  'Доски': { position: [0, 1, -3.8], yaw: 0, pitch: -.35 },
+  'Доски': { position: [0, 1, -3.8], yaw: 0, pitch: -.55 },
   'Мост': { position: [19, 1, 6.2], yaw: 0, pitch: -.35 },
   'Стена': { position: [-14, 1, 18.4], yaw: 0, pitch: -.2 },
   'Склон / ступени': { position: [28.1, 1, 4], yaw: -Math.PI / 2, pitch: -.25 },

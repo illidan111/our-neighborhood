@@ -1,5 +1,6 @@
 import { Component, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { BookOpen, House, ArrowRight, RotateCcw, Volume2, Footprints, Sun, CloudRain, Check, X } from 'lucide-react';
@@ -30,7 +31,7 @@ class SceneBoundary extends Component<{ children: ReactNode }, { error: boolean 
   state = { error: false };
   static getDerivedStateFromError() { return { error: true }; }
   componentDidCatch(error: Error, info: ErrorInfo) { console.error('Не удалось запустить 3D-сцену', error, info); }
-  render() { return this.state.error ? <div className="scene-error" role="alert"><strong>Не удалось открыть район</strong><p>Модель или 3D-сцена не загрузилась. Проверь соединение и поддержку WebGL. Сохранённая история остаётся на месте.</p><button className="primary-button" onClick={() => window.location.reload()}>Попробовать ещё раз</button></div> : this.props.children; }
+  render() { return this.state.error ? createPortal(<div className="scene-error" role="alert"><strong>Не удалось открыть район</strong><p>Модель или 3D-сцена не загрузилась. Проверь соединение и поддержку WebGL. Сохранённая история остаётся на месте.</p><button className="primary-button" onClick={() => window.location.reload()}>Попробовать ещё раз</button></div>, document.body) : this.props.children; }
 }
 const phaseNames = { preparation: 'День 1 · до грозы', storm: 'День 1 · гроза', aftermath: 'После грозы · утро' };
 

@@ -1,0 +1,33 @@
+{
+  "fixture": "Полка дома",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": "home_supply",
+  "held": null,
+  "phase": "preparation",
+  "supplies": true,
+  "batteryAt": null,
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      -16,
+      0.945,
+      15.2
+    ],
+    "yaw": 0,
+    "pitch": -0.45,
+    "grounded": true,
+    "cameraPosition": [
+      -16,
+      2.491,
+      17.262
+    ],
+    "cameraDistance": 2.29,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.944901168346405,
+    "maxY": 1
+  },
+  "lastAction": "E → home_supply"
+}

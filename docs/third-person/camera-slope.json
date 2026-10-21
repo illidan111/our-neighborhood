@@ -1,0 +1,33 @@
+{
+  "fixture": "Склон / ступени",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": null,
+  "held": null,
+  "phase": "preparation",
+  "supplies": false,
+  "batteryAt": null,
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      33.719,
+      2.045,
+      4
+    ],
+    "yaw": -1.5707963267948966,
+    "pitch": -0.25,
+    "grounded": true,
+    "cameraPosition": [
+      29.65,
+      3.634,
+      4
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 1.5708284417717586
+  },
+  "sampledHeightRange": {
+    "minY": 1,
+    "maxY": 2.0458319187164307
+  },
+  "lastAction": "Движение: 30 шагов × 1/60 с"
+}

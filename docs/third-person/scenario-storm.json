@@ -1,0 +1,33 @@
+{
+  "fixture": "Колокол",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": "day_bell",
+  "held": null,
+  "phase": "storm",
+  "supplies": true,
+  "batteryAt": "home",
+  "bridgeRepaired": true,
+  "pose": {
+    "position": [
+      0,
+      0.915,
+      3.2
+    ],
+    "yaw": 0,
+    "pitch": -0.15,
+    "grounded": true,
+    "cameraPosition": [
+      0,
+      2.093,
+      7.353
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.9150522947311401,
+    "maxY": 1
+  },
+  "lastAction": "E → day_bell"
+}

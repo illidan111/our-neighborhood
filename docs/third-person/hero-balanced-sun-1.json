@@ -1,0 +1,75 @@
+{
+  "protocol": "neighborhood-graphics-v1",
+  "status": "complete",
+  "durationSeconds": 30.28,
+  "frames": 35,
+  "frameMs": {
+    "mean": 863.28,
+    "p50": 1000.6,
+    "p95": 1006,
+    "p99": 1009.9,
+    "max": 1010.4
+  },
+  "fps": 1.16,
+  "over33ms": 31,
+  "over50ms": 31,
+  "renderSubmitCpuMs": {
+    "mean": 6.16,
+    "p50": 5.9,
+    "p95": 8.8,
+    "p99": 10,
+    "max": 11.6
+  },
+  "physicsStepCpuMs": {
+    "mean": 0.07,
+    "p50": 0.1,
+    "p95": 0.2,
+    "p99": 0.3,
+    "max": 4.3
+  },
+  "physicsSteps": 915,
+  "drawCalls": {
+    "mean": 190.22,
+    "p50": 181,
+    "p95": 243,
+    "p99": 243,
+    "max": 243
+  },
+  "triangles": {
+    "mean": 241712.56,
+    "p50": 239492,
+    "p95": 255524,
+    "p99": 255524,
+    "max": 255524
+  },
+  "gpuMs": {
+    "mean": 6.09,
+    "p50": 2.92,
+    "p95": 4.14,
+    "p99": 5.7,
+    "max": 109.69
+  },
+  "gpuSamples": 35,
+  "gpuTimer": "Asynchronous EXT_disjoint_timer_query_webgl2; disjoint samples discarded",
+  "viewport": {
+    "width": 1920,
+    "height": 1080,
+    "dpr": 1
+  },
+  "renderer": "Google Inc. (AMD) / ANGLE (AMD, AMD Radeon(TM) Graphics (0x00001681) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "jsHeapUsedMB": 105.67,
+  "bodies": 124,
+  "colliders": 124,
+  "geometries": 88,
+  "textures": 43,
+  "reactCommits": 0,
+  "reactActualDurationMs": 0,
+  "pageVisibility": "visible",
+  "documentFocused": true,
+  "hiddenFrames": 0,
+  "pageVisibleThroughout": true,
+  "scenario": "sun",
+  "buildMode": "production",
+  "hero": true,
+  "quality": "balanced"
+}

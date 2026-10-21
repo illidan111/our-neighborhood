@@ -1,0 +1,33 @@
+{
+  "fixture": "Разъём дома",
+  "paused": false,
+  "remainingInputSteps": 0,
+  "focus": "battery",
+  "held": null,
+  "phase": "preparation",
+  "supplies": true,
+  "batteryAt": "home",
+  "bridgeRepaired": false,
+  "pose": {
+    "position": [
+      -11,
+      0.945,
+      12.6
+    ],
+    "yaw": 0,
+    "pitch": -0.25,
+    "grounded": true,
+    "cameraPosition": [
+      -11,
+      2.534,
+      16.669
+    ],
+    "cameraDistance": 4.2,
+    "heroHeading": 3.141592653589793
+  },
+  "sampledHeightRange": {
+    "minY": 0.9449592232704163,
+    "maxY": 1
+  },
+  "lastAction": "E → home_battery"
+}
