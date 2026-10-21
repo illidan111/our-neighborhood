@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { CapsuleCollider, CuboidCollider, RigidBody, interactionGroups, useBeforePhysicsStep, useRapier } from "@react-three/rapier";
 import type { RapierRigidBody } from "@react-three/rapier";
-import type { KinematicCharacterController } from "@dimforge/rapier3d-compat";
+import type { KinematicCharacterController, Ray } from "@dimforge/rapier3d-compat";
 import { Euler, Group, Vector3 } from "three";
 import { ITEM_IDS, ITEM_SPAWNS, isInsideWorld, PLAYER_SPAWN } from "./model";
 import type { FPSState, GameCommand, ItemId, TargetId, Vec3 } from "./model";
@@ -74,6 +74,7 @@ export default function Controller(props: ControllerProps) {
   const releasing = useRef<ItemId | null>(null);
   const lastSnapshot = useRef("");
   const hasCameraPosition = useRef(false);
+  const focusRay = useRef<Ray | null>(null);
   const temp = useRef({ direction: new Vector3(), position: new Vector3(), rotation: new Euler(0, 0, 0, "YXZ") });
 
   const snapshot = () => {
@@ -100,7 +101,9 @@ export default function Controller(props: ControllerProps) {
   const raycastFocus = (): TargetId | null => {
     if (!player.current) return null;
     const direction = camera.getWorldDirection(temp.current.direction);
-    const ray = new rapier.Ray(camera.position, direction);
+    const ray = focusRay.current ??= new rapier.Ray(camera.position, direction);
+    ray.origin = camera.position;
+    ray.dir = direction;
     const held = current.current.state.held;
     const heldBody = held ? items.current[held] : undefined;
     const heldColliderHandle = heldBody?.collider(0).handle;
@@ -202,8 +205,8 @@ export default function Controller(props: ControllerProps) {
         if (item.bodyType() !== rapier.RigidBodyType.KinematicPositionBased) {
           item.setBodyType(rapier.RigidBodyType.KinematicPositionBased, true);
           item.setLinvel(ZERO, true); item.setAngvel(ZERO, true);
+          item.collider(0).setCollisionGroups(HELD_GROUPS);
         }
-        item.collider(0).setCollisionGroups(HELD_GROUPS);
         const eye = body.translation();
         const { yaw, pitch } = angles.current;
         const distance = id === "boards" ? 1.25 : 1.05;

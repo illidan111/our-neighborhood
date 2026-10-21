@@ -7,7 +7,10 @@ import Controller from './Controller';
 import Neighborhood from './Neighborhood';
 import { applyCommand, createFPSGame, describeTarget, getFPSOutcome, getObjective, ITEM_NAMES, PERSONAL_NOTE } from './model';
 import type { FPSState, GameCommand, TargetId, Vec3 } from './model';
-import { clearFPS, loadFPS, saveFPS } from './storage';
+import { clearFPS, loadFPS } from './storage';
+import { persistFPS, saveTelemetry } from './saveTelemetry';
+import Diagnostics from './Diagnostics';
+import type { BenchmarkMetrics } from './Diagnostics';
 import { BOT } from '../game';
 import { enableAudio, sound, unlockAudio } from './audio';
 
@@ -45,6 +48,9 @@ export default function FPSApp() {
   const [color, setColor] = useState(state.player.color);
   const [hasBegun, setHasBegun] = useState(false);
   const begunRef = useRef(false);
+  const lastSaveAttempt = useRef<FPSState | null>(null);
+  const [diagnostics, setDiagnostics] = useState(false);
+  const [metrics, setMetrics] = useState<BenchmarkMetrics | null>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const surface = useRef<HTMLDivElement | null>(null);
   const walking = useRef(false);
@@ -69,7 +75,11 @@ export default function FPSApp() {
     else if (after.held && !before.held) sound('pick');
     else if (!after.held && before.held) sound(action.type === 'drop' ? 'drop' : 'install');
     stateRef.current = after;
-    if (begunRef.current && (action.type === 'snapshot' || action.type === 'saveCheckpoint')) saveFPS(after);
+    if (begunRef.current && (action.type === 'snapshot' || action.type === 'saveCheckpoint')) {
+      // This synchronous path also flushes pagehide/blur. The effect below skips it.
+      lastSaveAttempt.current = after;
+      setSaveError(persistFPS(after) ? '' : 'Не удалось сохранить прогулку. Проверь доступ к хранилищу браузера.');
+    }
     setState(after);
   }, []);
 
@@ -81,6 +91,7 @@ export default function FPSApp() {
       if (!nowLocked) { walking.current = false; setMenu(value => value === null ? 'pause' : value); }
     };
     const keyboard = (event: KeyboardEvent) => {
+      if (event.code === 'F3') { event.preventDefault(); setDiagnostics(value => !value); }
       if (event.code === 'Escape') setMenu(value => value === 'journal' ? 'pause' : value);
       if (event.code === 'KeyJ' && document.pointerLockElement === canvas.current) {
         event.preventDefault(); setMenu('journal'); document.exitPointerLock();
@@ -97,8 +108,9 @@ export default function FPSApp() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* game remains playable */ }
   }, [settings]);
   useEffect(() => {
-    if (!hasBegun) return;
-    if (!saveFPS(state)) setSaveError('Не удалось сохранить прогулку. Проверь доступ к хранилищу браузера.');
+    if (!hasBegun || lastSaveAttempt.current === state) return;
+    lastSaveAttempt.current = state;
+    if (!persistFPS(state)) setSaveError('Не удалось сохранить прогулку. Проверь доступ к хранилищу браузера.');
     else setSaveError('');
   }, [state, hasBegun]);
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(''), 8500); return () => clearTimeout(id); }, [toast]);
@@ -158,6 +170,7 @@ export default function FPSApp() {
               <Neighborhood state={state} />
               <Controller key={session} state={state} active={active} sensitivity={settings.sensitivity} bob={settings.bob} onFocus={setFocus} onCommand={command} onMotion={value => { walking.current = value; }} onPose={reportPose} />
               <Ready onReady={setReady} />
+              {diagnostics && <Diagnostics run={0} onSample={setMetrics} />}
             </Physics>
           </Suspense>
         </Canvas>
@@ -203,6 +216,7 @@ export default function FPSApp() {
       {state.legacyImported && <details><summary>Архив прежней кампании · {state.base.history.length} записей</summary><p>Архив сохранён в состоянии игры. Новый физический сценарий использует отдельный журнал.</p></details>}
     </div><footer><button className="primary-button" onClick={() => void resume()}>Вернуться к прогулке<ArrowRight size={19} /></button></footer></section></div>}
     <div className="desktop-note">Для прогулки нужны клавиатура и мышь.</div>
+    {diagnostics && <aside className="diagnostics-panel" aria-label="Диагностика производительности"><strong>Диагностика · F3 скрыть</strong><pre>{metrics ? JSON.stringify({ frameMs: metrics.frameMs, calls: metrics.drawCalls?.p50, triangles: metrics.triangles?.p50, cpuRenderMs: metrics.renderSubmitCpuMs?.p50, gpuMs: metrics.gpuMs?.p50, physicsMs: metrics.physicsStepCpuMs?.p95, geometry: metrics.geometries, saves: saveTelemetry }, null, 2) : 'Собираем кадры…'}</pre><small>FPS в фоновой вкладке может быть ограничен браузером.</small></aside>}
   </main>;
 }
 

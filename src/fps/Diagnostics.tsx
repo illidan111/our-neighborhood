@@ -14,7 +14,7 @@ export type BenchmarkMetrics = {
   bodies: number; colliders: number; geometries: number; textures: number;
   reactCommits: number; reactActualDurationMs: number;
   pageVisibility: DocumentVisibilityState; documentFocused: boolean;
-  hiddenFrames: number; frameTimingReliable: boolean;
+  hiddenFrames: number; pageVisibleThroughout: boolean;
 };
 export type ReactMeasurements = { commits: number; durationMs: number };
 type TimerExtension = { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number };
@@ -121,7 +121,7 @@ export default function Diagnostics({ run, durationSeconds = 30, onSample, onCom
         reactCommits: (reactMeasurements?.current.commits ?? 0) - current.reactStart.commits,
         reactActualDurationMs: rounded((reactMeasurements?.current.durationMs ?? 0) - current.reactStart.durationMs),
         pageVisibility: document.visibilityState, documentFocused: document.hasFocus(),
-        hiddenFrames: current.hiddenFrames, frameTimingReliable: current.hiddenFrames === 0 && document.visibilityState === 'visible',
+        hiddenFrames: current.hiddenFrames, pageVisibleThroughout: current.hiddenFrames === 0 && document.visibilityState === 'visible',
       };
       callbacks.current.onSample(metrics);
       if (finish) { current.completed = true; callbacks.current.onComplete?.(metrics); }

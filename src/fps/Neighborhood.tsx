@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { CuboidCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { BOT } from '../game';
 import type { FPSState, TargetId } from './model';
 import { TARGET_POSITIONS, type WorldPoint } from './landmarks';
+import { StaticBatch, StaticPrimitive, Unbatched } from './StaticBatch';
 
 const C = {
   grass: '#8eb965', grassLight: '#afc97d', grassDark: '#6d9d62', cream: '#f5e5bc',
@@ -14,13 +15,10 @@ const C = {
 };
 type Vec3 = [number, number, number];
 
-function Box({ position = [0, 0, 0], size = [1, 1, 1], color = C.cream, rotation, emissive, intensity = 0 }: {
-  position?: Vec3; size?: Vec3; color?: string; rotation?: Vec3; emissive?: string; intensity?: number;
+function Box({ position = [0, 0, 0], size = [1, 1, 1], color = C.cream, rotation, emissive, intensity = 0, castShadow = true }: {
+  position?: Vec3; size?: Vec3; color?: string; rotation?: Vec3; emissive?: string; intensity?: number; castShadow?: boolean;
 }) {
-  return <mesh position={position} rotation={rotation} castShadow receiveShadow>
-    <boxGeometry args={size} />
-    <meshStandardMaterial color={color} roughness={0.86} emissive={emissive} emissiveIntensity={intensity} />
-  </mesh>;
+  return <StaticPrimitive shape="box" position={position} rotation={rotation} scale={size} color={color} emissive={emissive} intensity={intensity} castShadow={castShadow} />;
 }
 
 function SolidBox(props: Parameters<typeof Box>[0] & { target?: TargetId }) {
@@ -31,19 +29,14 @@ function SolidBox(props: Parameters<typeof Box>[0] & { target?: TargetId }) {
   </RigidBody>;
 }
 
-function Cylinder({ position = [0, 0, 0], radius = 1, bottom, height = 1, color = C.wood, sides = 8, rotation }: {
-  position?: Vec3; radius?: number; bottom?: number; height?: number; color?: string; sides?: number; rotation?: Vec3;
+function Cylinder({ position = [0, 0, 0], radius = 1, bottom, height = 1, color = C.wood, sides = 8, rotation, castShadow = true }: {
+  position?: Vec3; radius?: number; bottom?: number; height?: number; color?: string; sides?: number; rotation?: Vec3; castShadow?: boolean;
 }) {
-  return <mesh position={position} rotation={rotation} castShadow receiveShadow>
-    <cylinderGeometry args={[radius, bottom ?? radius, height, sides]} />
-    <meshStandardMaterial color={color} flatShading roughness={0.9} />
-  </mesh>;
+  return <StaticPrimitive shape="cylinder" position={position} rotation={rotation} scale={[radius, height, radius]} bottomRatio={(bottom ?? radius) / radius} color={color} sides={sides} castShadow={castShadow} />;
 }
 
-function Boulder({ position, scale = [1, 1, 1], color = C.stone }: { position: Vec3; scale?: Vec3; color?: string }) {
-  return <mesh position={position} scale={scale} castShadow receiveShadow>
-    <dodecahedronGeometry args={[1, 0]} /><meshStandardMaterial color={color} flatShading roughness={1} />
-  </mesh>;
+function Boulder({ position, scale = [1, 1, 1], color = C.stone, castShadow = true }: { position: Vec3; scale?: Vec3; color?: string; castShadow?: boolean }) {
+  return <StaticPrimitive shape="boulder" position={position} scale={scale} color={color} castShadow={castShadow} />;
 }
 
 function TextPlate({ lines, width = 2, height = 0.65, position = [0, 0, 0], rotation = [0, 0, 0], background = C.trim, ink = C.ink, fontSize = 62 }: {
@@ -130,7 +123,7 @@ function Fan({ position, powered }: { position: Vec3; powered: boolean }) {
     <Cylinder position={[0, -0.25, 0]} radius={0.035} height={0.5} color={C.dark} />
     <Box position={[0, -0.49, 0]} size={[0.42, 0.05, 0.3]} color={C.dark} />
     <mesh><torusGeometry args={[0.31, 0.035, 6, 16]} /><meshStandardMaterial color={C.trim} /></mesh>
-    <group ref={rotor}>{[0, 1, 2].map(i => <Box key={i} position={[0, 0, 0]} size={[0.52, 0.12, 0.035]} color={C.teal} rotation={[0, 0, i * Math.PI / 3]} />)}</group>
+    <Unbatched><group ref={rotor}>{[0, 1, 2].map(i => <Box key={i} position={[0, 0, 0]} size={[0.52, 0.12, 0.035]} color={C.teal} rotation={[0, 0, i * Math.PI / 3]} />)}</group></Unbatched>
   </group>;
 }
 
@@ -212,7 +205,7 @@ function Shop({ powered, aftermath }: { powered: boolean; aftermath: boolean }) 
     <SolidBox position={[-19.5, 0.45, -7.5]} size={[1.25, 0.9, 0.8]} color={C.wood} />
     {Array.from({ length: 6 }, (_, i) => <Boulder key={i} position={[-19.9 + (i % 3) * 0.35, 0.97, -7.65 + Math.floor(i / 3) * 0.35]} scale={[0.14, 0.14, 0.14]} color={powered || !aftermath ? '#e8a44f' : '#8f8151'} />)}
     <Box position={[-12.3, 4.14, -13]} size={[0.22, 1.8, 0.22]} color={C.dark} />
-    <group position={[-12.3, 5.2, -12.86]} ref={fan}>{[0, 1, 2, 3].map(i => <Box key={i} size={[0.12, 1.3, 0.035]} color={C.yellow} rotation={[0, 0, i * Math.PI / 4]} />)}</group>
+    <Unbatched><group position={[-12.3, 5.2, -12.86]} ref={fan}>{[0, 1, 2, 3].map(i => <Box key={i} size={[0.12, 1.3, 0.035]} color={C.yellow} rotation={[0, 0, i * Math.PI / 4]} />)}</group></Unbatched>
     {powered && <pointLight position={[-16, 2.3, -8]} color="#ffdc99" intensity={10} distance={8} decay={2} />}
   </group>;
 }
@@ -265,8 +258,8 @@ function Fence({ from, to, color = C.lightWood }: { from: [number, number]; to: 
 function FlowerPatch({ x, z, color = C.yellow }: { x: number; z: number; color?: string }) {
   return <group position={[x, 0, z]}>
     {[[-0.3, 0.05], [0.2, 0.25], [0.05, -0.2]].map(([dx, dz], i) => <group key={i} position={[dx, 0, dz]}>
-      <Cylinder radius={0.018} height={0.3 + i * 0.06} position={[0, 0.15, 0]} color={C.grassDark} sides={4} />
-      <Boulder position={[0, 0.33 + i * 0.035, 0]} scale={[0.13, 0.08, 0.13]} color={color} />
+      <Cylinder radius={0.018} height={0.3 + i * 0.06} position={[0, 0.15, 0]} color={C.grassDark} sides={4} castShadow={false} />
+      <Boulder position={[0, 0.33 + i * 0.035, 0]} scale={[0.13, 0.08, 0.13]} color={color} castShadow={false} />
     </group>)}
   </group>;
 }
@@ -293,12 +286,12 @@ function Plaza({ storm }: { storm: boolean }) {
       <Box position={[0, -0.85, 0]} size={[1.9, 0.3, 1.35]} color={C.stone} />
       {[-0.65, 0.65].map(x => <Box key={x} position={[x, 0.3, 0]} size={[0.14, 2.4, 0.16]} color={C.wood} />)}
       <Box position={[0, 1.46, 0]} size={[1.65, 0.19, 0.2]} color={C.wood} />
-      <group ref={bell} position={[0, 1.25, 0]}>
+      <Unbatched><group ref={bell} position={[0, 1.25, 0]}>
         <Cylinder position={[0, -0.23, 0]} radius={0.21} bottom={0.43} height={0.55} color={C.yellow} sides={10} />
         <Cylinder position={[0, -0.51, 0]} radius={0.47} height={0.07} color="#c5913e" sides={10} />
         <Cylinder position={[0, -0.7, 0]} radius={0.022} height={0.4} color={C.dark} />
         <Boulder position={[0, -0.94, 0]} scale={[0.1, 0.1, 0.1]} color={C.coral} />
-      </group>
+      </group></Unbatched>
       <TextPlate lines={['КОЛОКОЛ ПЛОЩАДИ', 'E — закончить день']} width={2.1} height={0.57} position={[0, -0.29, 0.5]} />
       <TextPlate lines={['КОЛОКОЛ ПЛОЩАДИ', 'E — закончить день']} width={2.1} height={0.57} position={[0, -0.29, -0.5]} rotation={[0, Math.PI, 0]} />
     </RigidBody>
@@ -403,9 +396,9 @@ const TREES: [number, number, number, boolean?][] = [
 function Scenery() {
   return <group>
     {TREES.map(([x, z, scale, autumn], i) => <Tree key={i} position={[x, 0, z]} scale={scale} autumn={autumn} shape={i % 3 === 0 ? 1 : 0} />)}
-    {[-33, -22, -10, 4, 18, 32].flatMap((x, i) => [-38, 47].map((z, j) => <Boulder key={`${x}:${z}`} position={[x, -2.5, z]} scale={[12, 8 + (i % 3) * 2, 10]} color={j ? '#90b48a' : '#8cae94'} />))}
-    {[-24, -7, 13, 30].map((z, i) => <Boulder key={z} position={[-50, -2, z]} scale={[13, 9 + i, 14]} color="#a7bf8f" />)}
-    {[-20, 4, 30].map((z, i) => <Boulder key={z} position={[52, -2, z]} scale={[12, 11 + i * 2, 16]} color="#8ca98c" />)}
+    {[-33, -22, -10, 4, 18, 32].flatMap((x, i) => [-38, 47].map((z, j) => <Boulder key={`${x}:${z}`} position={[x, -2.5, z]} scale={[12, 8 + (i % 3) * 2, 10]} color={j ? '#90b48a' : '#8cae94'} castShadow={false} />))}
+    {[-24, -7, 13, 30].map((z, i) => <Boulder key={z} position={[-50, -2, z]} scale={[13, 9 + i, 14]} color="#a7bf8f" castShadow={false} />)}
+    {[-20, 4, 30].map((z, i) => <Boulder key={z} position={[52, -2, z]} scale={[12, 11 + i * 2, 16]} color="#8ca98c" castShadow={false} />)}
     <Fence from={[-21, 10]} to={[-21, 21]} /><Fence from={[-21, 21]} to={[-7, 21]} /><Fence from={[-7, 13]} to={[-7, 21]} />
     <Fence from={[-22, -6]} to={[-22, -19]} /><Fence from={[-22, -19]} to={[-11, -19]} />
     <Fence from={[8, -18]} to={[16, -18]} /><Fence from={[16, -18]} to={[16, -12]} />
@@ -467,18 +460,18 @@ function Weather({ phase }: { phase: FPSState['phase'] }) {
     <hemisphereLight ref={ambient} args={['#d7ece8', '#9ba878', 1.8]} />
     <directionalLight ref={sun} position={[-18, 29, 15]} intensity={2.3} color="#fff1d2" castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={40} shadow-camera-bottom={-40} shadow-camera-near={1} shadow-camera-far={85} shadow-bias={-0.00025} shadow-normalBias={0.025} />
     <mesh ref={water} position={[24.5, -0.2, 3]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[5, 73]} /><meshStandardMaterial color={C.water} roughness={0.3} metalness={0.1} transparent opacity={0.9} /></mesh>
-    {Array.from({ length: 22 }, (_, i) => <Box key={i} position={[22.7 + (i % 4) * 0.95, -0.183, -27 + i * 3]} size={[0.55 + (i % 3) * 0.18, 0.008, 0.04]} color="#b4dce0" />)}
+    {Array.from({ length: 22 }, (_, i) => <Box key={i} position={[22.7 + (i % 4) * 0.95, -0.183, -27 + i * 3]} size={[0.55 + (i % 3) * 0.18, 0.008, 0.04]} color="#b4dce0" castShadow={false} />)}
     <lineSegments ref={rain} geometry={rainGeometry} visible={false}><lineBasicMaterial color="#cfdfec" transparent opacity={0} depthWrite={false} /></lineSegments>
     {[[-15, 18, -30], [18, 21, -39], [32, 19, 15], [-32, 20, 12]].map(([x, y, z], i) => <group key={i} position={[x, y, z]}>
-      <Boulder position={[0, 0, 0]} scale={[5, 1.5, 2.2]} color="#e9eee0" /><Boulder position={[3, 0.3, 0]} scale={[3, 1.7, 2]} color="#e9eee0" />
+      <Boulder position={[0, 0, 0]} scale={[5, 1.5, 2.2]} color="#e9eee0" castShadow={false} /><Boulder position={[3, 0.3, 0]} scale={[3, 1.7, 2]} color="#e9eee0" castShadow={false} />
     </group>)}
   </>;
 }
 
 /** Static environment and remote participant presentation; the local controller owns movement/items. */
-export default function Neighborhood({ state }: { state: FPSState }) {
+function Neighborhood({ state }: { state: FPSState }) {
   const homePowered = state.batteryAt === 'home', shopPowered = state.batteryAt === 'shop';
-  return <>
+  return <StaticBatch>
     <Weather phase={state.phase} />
     <SolidBox position={[-8, -0.5, 4]} size={[60, 1, 68]} color={C.grass} />
     <SolidBox position={[32.5, -0.5, 4]} size={[11, 1, 68]} color={C.grass} />
@@ -496,8 +489,16 @@ export default function Neighborhood({ state }: { state: FPSState }) {
     <Plaza storm={state.phase === 'storm'} />
     <Bridge repaired={state.bridgeRepaired} aftermath={state.phase === 'aftermath'} />
     <Scenery />
-    <NPC id="nina" position={TARGET_POSITIONS.nina} happy={homePowered} />
-    <NPC id="boris" position={TARGET_POSITIONS.boris} happy={shopPowered} />
-    <NPC id="mira" position={TARGET_POSITIONS.mira} happy={state.bridgeRepaired} />
-  </>;
+    <Unbatched>
+      <NPC id="nina" position={TARGET_POSITIONS.nina} happy={homePowered} />
+      <NPC id="boris" position={TARGET_POSITIONS.boris} happy={shopPowered} />
+      <NPC id="mira" position={TARGET_POSITIONS.mira} happy={state.bridgeRepaired} />
+    </Unbatched>
+  </StaticBatch>;
 }
+
+// Camera checkpoints, hover prompts and diary events do not alter the scenery.
+export default memo(Neighborhood, (before, after) => before.state.phase === after.state.phase
+  && before.state.batteryAt === after.state.batteryAt
+  && before.state.deliveredSupplies === after.state.deliveredSupplies
+  && before.state.bridgeRepaired === after.state.bridgeRepaired);
