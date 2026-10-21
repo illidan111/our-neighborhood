@@ -113,4 +113,15 @@ describe('third-person camera and hero interaction against real Rapier colliders
     player.setTranslation(safe!, true); player.setNextKinematicTranslation(safe!); world.step();
     expect(queries.restorePosition(world, player)).toBeNull();
   });
+
+  it('raises an old checkpoint onto a new garden terrace without losing its horizontal location', () => {
+    const { world, player, queries, box } = fixture();
+    box({ x: -26, y: 0.3, z: 2 }, { x: 2, y: 0.3, z: 2 });
+    player.setTranslation({ x: -26, y: 0.3, z: 2 }, true);
+    player.setNextKinematicTranslation({ x: -26, y: 0.3, z: 2 }); world.step();
+    const safe = queries.restorePosition(world, player);
+    expect(safe).toEqual({ x: -26, y: expect.closeTo(1.525, 3), z: 2 });
+    player.setTranslation(safe!, true); player.setNextKinematicTranslation(safe!); world.step();
+    expect(queries.restorePosition(world, player)).toBeNull();
+  });
 });

@@ -9,8 +9,8 @@ import { ITEM_IDS, ITEM_SPAWNS, isInsideWorld, PLAYER_SPAWN } from "./model";
 import type { FPSState, GameCommand, ItemId, TargetId, Vec3 } from "./model";
 import { carryPosition, configureCharacter, ITEM_HALF_SIZES, PLAYER_HALF_SEGMENT, PLAYER_RADIUS, stepCharacter } from "./physics";
 import type { CharacterMotion } from "./physics";
-import { Character } from "./Character";
-import type { CharacterMotion as PresentationMotion } from "./Character";
+import { HeroAvatar } from "./CharacterAvatar";
+import type { HeroMotion } from "./heroAnimation";
 import { CAMERA_DEFAULT_DISTANCE, CAMERA_MAX_DISTANCE, CAMERA_MIN_DISTANCE, HERO_FEET_OFFSET, ThirdPersonQueries, smoothCameraDistance, turnToward } from "./camera";
 
 /** Explicit review UI drives the real fixed-step controller without Pointer Lock. */
@@ -80,7 +80,11 @@ export default function Controller(props: ControllerProps) {
   const angles = useRef({ yaw: state.checkpoint.yaw, pitch: Math.max(-0.95, Math.min(0.35, state.checkpoint.pitch || -0.24)) });
   const boom = useRef({ requested: CAMERA_DEFAULT_DISTANCE, actual: CAMERA_DEFAULT_DISTANCE });
   const heading = useRef(state.checkpoint.yaw + Math.PI);
-  const heroMotion = useRef<PresentationMotion>({ speed: 0, distance: 0, animation: 'idle' });
+  const heroMotion = useRef<HeroMotion>({ speed: 0, distance: 0, grounded: false, verticalVelocity: 0,
+    held: state.held, heading: state.checkpoint.yaw + Math.PI, paused: !active });
+  heroMotion.current.paused = !active;
+  heroMotion.current.held = state.held;
+  if (!active) heroMotion.current.speed = 0;
   const restorationSteps = useRef(0);
   const motion = useRef<CharacterMotion>({ verticalVelocity: 0, grounded: false });
   const focused = useRef<TargetId | null>(null);
@@ -233,8 +237,11 @@ export default function Controller(props: ControllerProps) {
     const travelled = Math.hypot(dx, dz);
     heroMotion.current.speed = travelled / world.timestep;
     heroMotion.current.distance += travelled;
-    heroMotion.current.animation = latest.held ? 'carry' : travelled < 0.0005 ? 'idle' : sprint ? 'run' : 'walk';
     if (travelled > 0.0005) heading.current = turnToward(heading.current, Math.atan2(dx, dz), world.timestep);
+    heroMotion.current.grounded = motion.current.grounded;
+    heroMotion.current.verticalVelocity = motion.current.verticalVelocity;
+    heroMotion.current.held = latest.held;
+    heroMotion.current.heading = heading.current;
     jumpQueued.current = false;
     const isWalking = Boolean(moving && travelled > 0.0005 && motion.current.grounded);
     if (walking.current !== isWalking) { walking.current = isWalking; current.current.onMotion?.(isWalking); }
@@ -313,7 +320,7 @@ export default function Controller(props: ControllerProps) {
       <CapsuleCollider args={[PLAYER_HALF_SEGMENT, PLAYER_RADIUS]} collisionGroups={PLAYER_GROUPS} friction={0} />
       <group ref={playerVisual}>
         <group ref={heroVisual} position={[0, -HERO_FEET_OFFSET, 0]}>
-          <Character motion={heroMotion.current} color={state.player.color} />
+          <HeroAvatar motionRef={heroMotion} color={state.player.color} />
         </group>
       </group>
     </RigidBody>
