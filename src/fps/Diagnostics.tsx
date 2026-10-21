@@ -5,6 +5,7 @@ import { useAfterPhysicsStep, useBeforePhysicsStep, useRapier } from '@react-thr
 export type Distribution = { mean: number; p50: number; p95: number; p99: number; max: number };
 export type BenchmarkMetrics = {
   protocol: 'neighborhood-graphics-v1'; status: 'live' | 'running' | 'complete';
+  scenario?: string; buildMode?: string; jsHeapUsedMB: number | null;
   durationSeconds: number; frames: number; frameMs: Distribution | null; fps: number | null;
   over33ms: number; over50ms: number; renderSubmitCpuMs: Distribution | null;
   physicsStepCpuMs: Distribution | null; physicsSteps: number;
@@ -117,6 +118,7 @@ export default function Diagnostics({ run, durationSeconds = 30, onSample, onCom
         drawCalls: distribution(sample.calls), triangles: distribution(sample.triangles),
         gpuMs: distribution(sample.gpu), gpuSamples: sample.gpu.length, gpuTimer: gpuLabel.current,
         viewport: { width: size.width, height: size.height, dpr: gl.getPixelRatio() }, renderer: renderer.current,
+        jsHeapUsedMB: (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ? rounded((performance as Performance & { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize / 1048576) : null,
         bodies: world.bodies.len(), colliders: world.colliders.len(), geometries: gl.info.memory.geometries, textures: gl.info.memory.textures,
         reactCommits: (reactMeasurements?.current.commits ?? 0) - current.reactStart.commits,
         reactActualDurationMs: rounded((reactMeasurements?.current.durationMs ?? 0) - current.reactStart.durationMs),

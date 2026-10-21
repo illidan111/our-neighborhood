@@ -30,6 +30,9 @@ const ROUTE: Array<{ time: number; position: Vec3; look: Vec3 }> = [
   { time: 25, position: [17, 1.67, 6], look: [24, .6, 4] },
   { time: 30, position: [1, 1.67, 9], look: [-7, 1.3, -6] },
 ];
+const reviewParams = new URLSearchParams(location.search);
+const reviewDpr = reviewParams.get('dpr') === '1' ? 1 : 1.5;
+const reviewWeather = reviewParams.get('weather') === 'storm' ? 'storm' : reviewParams.get('weather') === 'sun' ? 'sun' : 'route';
 const base = createFPSGame('Графический замер', '#e78064', 314159);
 const STUDIO_VARIANTS: Array<[CharacterVariant, string]> = [['base', 'База']];
 const STUDIO_ANIMATIONS: Array<[CharacterAnimation, string]> = [['idle', 'Ожидание'], ['walk', 'Ходьба'], ['run', 'Бег'], ['carry', 'Перенос'], ['react', 'Реакция']];
@@ -131,7 +134,7 @@ function ReviewMotion({ pose, running, started, run }: { pose: Pose; running: bo
 /** Read-only synthetic graphics route; never reads or writes game saves. */
 export default function ReviewApp() {
   const [poseName, setPoseName] = useState('Площадь');
-  const [state, setState] = useState(base);
+  const [state, setState] = useState<FPSState>({ ...base, phase: reviewWeather === 'storm' ? 'storm' : 'preparation' });
   const [run, setRun] = useState(0), [running, setRunning] = useState(false), [started, setStarted] = useState(0);
   const [metrics, setMetrics] = useState<BenchmarkMetrics | null>(null), [json, setJson] = useState(false);
   const [studio, setStudio] = useState(false), [variant, setVariant] = useState<CharacterVariant>('base');
@@ -143,24 +146,24 @@ export default function ReviewApp() {
     if (!running) return;
     // Mirror the live controller's checkpoint cadence without touching localStorage.
     const timer = window.setInterval(() => setState(value => ({ ...value, checkpoint: { ...value.checkpoint, yaw: value.checkpoint.yaw + .001 } })), 1500);
-    const storm = window.setTimeout(() => setState(value => ({ ...value, phase: 'storm' })), 24000);
+    const storm = reviewWeather === 'route' ? window.setTimeout(() => setState(value => ({ ...value, phase: 'storm' })), 24000) : undefined;
     return () => { clearInterval(timer); clearTimeout(storm); };
   }, [running]);
   const select = (name: string) => { setRunning(false); setPoseName(name); setState({ ...base, phase: REVIEW_POSES[name].phase }); };
-  const start = () => { setState({ ...base }); setStarted(performance.now()); setRun(value => value + 1); setRunning(true); setJson(false); };
+  const start = () => { setState({ ...base, phase: reviewWeather === 'storm' ? 'storm' : 'preparation' }); setStarted(performance.now()); setRun(value => value + 1); setRunning(true); setJson(false); };
   const exportJson = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(metrics, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a'); link.href = url; link.download = 'neighborhood-benchmark.json'; link.click(); URL.revokeObjectURL(url);
   };
   const buttonStyle = { border: '1px solid #b8c5bb', background: '#fff9e8', color: '#284d49', borderRadius: 5, padding: '7px 10px', cursor: 'pointer', font: '600 12px system-ui' };
   return <main style={{ position: 'fixed', inset: 0, background: '#bed9d4', fontFamily: 'system-ui, sans-serif' }}>
-    <Canvas shadows dpr={1.5} camera={{ fov: 70, near: .05, far: 180, position: pose.position }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
+    <Canvas shadows dpr={reviewDpr} camera={{ fov: 70, near: .05, far: 180, position: pose.position }} gl={{ antialias: true, powerPreference: 'high-performance' }}>
       <Suspense fallback={null}>{studio ? <CharacterStudio variant={variant} animation={animation} view={view} paused={paused} step={step} reaction={reaction} /> : <Physics timeStep={1 / 60}>
         <Profiler id="Neighborhood" onRender={(_id, _phase, actualDuration) => { reactMeasurements.current.commits++; reactMeasurements.current.durationMs += actualDuration; }}>
           <Neighborhood state={state} />
         </Profiler>
         <ReviewMotion pose={pose} run={run} running={running} started={started} />
-        <Diagnostics run={run} reactMeasurements={reactMeasurements} onSample={setMetrics} onComplete={() => setRunning(false)} />
+        <Diagnostics run={run} reactMeasurements={reactMeasurements} onSample={sample => setMetrics({ ...sample, scenario: reviewWeather, buildMode: import.meta.env.MODE })} onComplete={() => setRunning(false)} />
       </Physics>}</Suspense>
     </Canvas>
     <nav aria-label="Ракурсы проверки" style={{ position: 'absolute', top: 10, left: 10, right: 10, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
@@ -183,7 +186,7 @@ export default function ReviewApp() {
         Высота около 1,85 м · сетка 2 м · движение родителя связано с длиной шага.<br />
         Пауза фиксирует всю позу. «Шаг ⅛ с» сдвигает её на 0,125 с.
       </> : <><strong>Синтетический графический замер · не плейтест</strong><br />
-      {running ? '0–12 с: маршрут и NPC · 12–18 с: ящик · 18 с: бросок · 24 с: гроза' : 'Фиксированные ракурсы · камера 70° · DPR 1.5 · без игровых сохранений'}
+      {running ? '0–12 с: маршрут и NPC · 12–18 с: ящик · 18 с: бросок · 24 с: гроза' : `Камера 70° · DPR ${reviewDpr} · ${reviewWeather} · ${import.meta.env.MODE} · без игровых сохранений`}
       {metrics && <div data-testid="benchmark-status">{metrics.status} · {metrics.durationSeconds} с · {metrics.fps ?? '—'} FPS · p95 {metrics.frameMs?.p95 ?? '—'} мс · {metrics.drawCalls?.p50 ?? '—'} calls · {metrics.triangles?.p50 ?? '—'} triangles</div>}
       <div>Видимость DOM не гарантирует отсутствие ограничения частоты браузером.</div></>}
     </div>
