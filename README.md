@@ -8,6 +8,8 @@
 
 Нужны Node.js **22.12 или новее** и npm. Разработка и проверка выполнялись на Node.js 24.
 
+Для установки точных версий из `package-lock.json` используйте `npm ci` вместо `npm install`.
+
 ```sh
 npm install
 npm run dev
